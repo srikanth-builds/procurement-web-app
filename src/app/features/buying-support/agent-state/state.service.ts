@@ -517,10 +517,10 @@ export class StateService {
       case EventType.CUSTOM:
         const customEvent = event as any;
         if (
-          customEvent.payload?.name === 'adk_metadata' &&
-          customEvent.payload?.value?.download_info?.type === 'gcs_artifact'
+          customEvent?.name === 'adk_metadata' &&
+          customEvent?.value?.download_info?.type === 'gcs_artifact'
         ) {
-          const downloadInfo = customEvent.payload.value.download_info;
+          const downloadInfo = customEvent.value.download_info;
           this.state.update((s) => ({
             ...s,
             artifacts: [
@@ -944,11 +944,11 @@ export class StateService {
 
   private findSupplierInHistory(state: AppState, name: string): SupplierItem | undefined {
     // Search in activities for supplier lists (since we don't have a dedicated panel type for suppliers in stream yet, or maybe we do check activities)
-    for (const act of state.activities) {
-      if (act.activityType === 'supplier_list') {
-        const content = act.content as any;
-        if (content.suppliers && Array.isArray(content.suppliers)) {
-          const found = content.suppliers.find((s: any) => s.name === name);
+    for (const chatItem of state.chatStream) {
+      if ('type' in chatItem && chatItem.type === 'supplier-list-panel') {
+        const suppliers = (chatItem as SupplierListPanel).suppliers;
+        if (suppliers && Array.isArray(suppliers)) {
+          const found = suppliers.find((s) => s.name === name);
           if (found) return found;
         }
       }

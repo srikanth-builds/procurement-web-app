@@ -263,6 +263,10 @@ export class AgentService {
       event.messageId = event.message_id;
     }
 
+    if(event.activity_type){
+      event.activityType = event.activity_type;
+    }
+
     // Ensure delta is present for ARGS/CONTENT events if missing (though usually it's there)
     // Some backends might use 'content' instead of 'delta' for text content events?
     // But based on user logs, 'delta' seems to be there for args.
