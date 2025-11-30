@@ -1,0 +1,123 @@
+<div class="flex flex-col gap-6 pb-4" #chatMessagesContainer>
+    @if (state().chatStream.length === 0) {
+    <div class="flex flex-col items-center justify-center h-full py-10 gap-6 text-center">
+        <div class="space-y-2">
+            <h3 class="text-lg font-semibold">Welcome to ProcureFlow</h3>
+            <p class="text-muted-foreground text-sm">How can I help you today?</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl px-4">
+            <button (click)="handleSendMessage('I need to buy a new laptop')"
+                class="flex flex-col items-start gap-2 p-4 rounded-xl border bg-card hover:bg-accent/50 transition-colors text-left shadow-sm group">
+                <div class="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                    <lucide-icon name="shopping-cart" class="size-5"></lucide-icon>
+                </div>
+                <span class="font-medium text-sm">New Purchase</span>
+                <span class="text-xs text-muted-foreground">I need to buy a new laptop</span>
+            </button>
+
+            <button (click)="handleSendMessage('Check the status of my PR')"
+                class="flex flex-col items-start gap-2 p-4 rounded-xl border bg-card hover:bg-accent/50 transition-colors text-left shadow-sm group">
+                <div class="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:bg-blue-500/20 transition-colors">
+                    <lucide-icon name="file-text" class="size-5"></lucide-icon>
+                </div>
+                <span class="font-medium text-sm">Check Status</span>
+                <span class="text-xs text-muted-foreground">Check the status of my PR</span>
+            </button>
+
+            <button (click)="handleSendMessage('What are the latest procurement policies?')"
+                class="flex flex-col items-start gap-2 p-4 rounded-xl border bg-card hover:bg-accent/50 transition-colors text-left shadow-sm group">
+                <div
+                    class="p-2 rounded-lg bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20 transition-colors">
+                    <lucide-icon name="book-open" class="size-5"></lucide-icon>
+                </div>
+                <span class="font-medium text-sm">Policy Query</span>
+                <span class="text-xs text-muted-foreground">Latest procurement policies?</span>
+            </button>
+        </div>
+    </div>
+    }
+
+    @for (item of state().chatStream; track $index) {
+    <!-- User Message -->
+    @if (isMessage(item) && item.role === 'user') {
+    <div class="flex justify-end">
+        <div class="bg-primary text-primary-foreground px-5 py-3.5 rounded-2xl rounded-tr-sm max-w-[85%] shadow-sm">
+            <div class="whitespace-pre-wrap text-sm leading-relaxed">{{ item.content }}</div>
+        </div>
+    </div>
+    }
+
+    <!-- Assistant Message -->
+    @if (isMessage(item) && item.role === 'assistant') {
+    <div class="flex flex-col gap-2 max-w-[90%]">
+        <div class="flex items-center gap-2 mb-1">
+            <div class="flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-600">
+                <lucide-icon name="bot" class="size-4"></lucide-icon>
+            </div>
+            <span class="text-sm font-semibold text-foreground">{{ item.name || 'Assistant' }}</span>
+        </div>
+        <div class="bg-card text-card-foreground border border-border rounded-2xl rounded-tl-sm p-5 shadow-sm">
+            <div class="prose-base">
+                <markdown [data]="item.content"></markdown>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Thoughts Panel (Reasoning) -->
+    @if (isThoughtsPanel(item) && shouldShowThinking(item, $index)) {
+    <div
+        class="rounded-lg p-3 bg-muted/50 shadow-inner text-xs text-muted-foreground flex items-center gap-2 animate-pulse">
+        <span class="size-2 rounded-full bg-amber-500"></span>
+        @if (item.steps.length > 0) {
+        <span class="font-medium  tracking-wider">{{ item.steps[item.steps.length - 1].title }}</span>
+        } @else {
+        <span class="font-medium  tracking-wider">Thinking...</span>
+        }
+    </div>
+    }
+
+    <!-- Tool Call (Simple representation) -->
+    @if (isToolCall(item)) {
+    @if (getToolRequest(item); as request) {
+    <div class="flex items-center gap-2 text-xs text-muted-foreground px-4 py-2 border rounded-full w-fit bg-muted/20">
+        @if (item.status === 'running') {
+        <lucide-icon name="loader-2" class="size-3 animate-spin text-blue-500"></lucide-icon>
+        } @else if (item.status === 'success') {
+        <lucide-icon name="check" class="size-3 text-green-500"></lucide-icon>
+        } @else if (item.status === 'error') {
+        <lucide-icon name="x" class="size-3 text-red-500"></lucide-icon>
+        } @else {
+        <span class="size-2 rounded-full bg-red-500"></span>
+        }
+        <span>{{ request }}</span>
+    </div>
+    }
+    }
+
+    <!-- Product Options -->
+    @if (isProductOptionsPanel(item)) {
+    <app-product-carousel [products]="item.products" (addToPr)="addToPr.emit($event)"></app-product-carousel>
+    }
+
+    <!-- Supplier List -->
+    @if (isSupplierListPanel(item)) {
+    <app-supplier-carousel [suppliers]="item.suppliers"
+        (selectSupplier)="selectSupplier.emit($event)"></app-supplier-carousel>
+    }
+    }
+
+    <!-- Suggestions Removed (Moved to Chat Input) -->
+
+    <!-- Loading Indicator -->
+    @if (isLoading()) {
+    <div class="flex gap-2 items-center text-muted-foreground text-sm p-4 animate-pulse">
+        <div class="flex gap-1">
+            <span class="size-2 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+            <span class="size-2 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+            <span class="size-2 bg-current rounded-full animate-bounce"></span>
+        </div>
+        <span>Thinking...</span>
+    </div>
+    }
+</div>

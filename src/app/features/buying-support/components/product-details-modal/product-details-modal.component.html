@@ -1,0 +1,50 @@
+@if (isOpen()) {
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm modal-backdrop"
+    (click)="onBackdropClick($event)">
+    <div
+        class="bg-background rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-4 border-b">
+            <h2 class="text-lg font-semibold">{{ product().name }}</h2>
+            <button class="text-muted-foreground hover:text-foreground" (click)="close.emit()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="lucide lucide-x">
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="aspect-square bg-muted rounded-lg overflow-hidden">
+                    <img [src]="imageUrl" [alt]="product().name" class="object-cover w-full h-full">
+                </div>
+                <div class="space-y-4">
+                    <div class="text-2xl font-bold">{{ product().price | currency }}</div>
+                    <p class="text-muted-foreground">{{ product().description }}</p>
+
+                    <div class="space-y-2">
+                        <h3 class="font-medium text-sm">Specifications</h3>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            @for (spec of product().specs | keyvalue; track spec.key) {
+                            <div class="text-muted-foreground">{{ formatKey(spec.key) }}:</div>
+                            <div>{{ spec.value }}</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t bg-muted/10 flex justify-end gap-2">
+            <button class="px-4 py-2 border rounded-lg hover:bg-muted" (click)="close.emit()">Close</button>
+            <button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                (click)="addToPr.emit(product()); close.emit()">Add to Requisition</button>
+        </div>
+    </div>
+</div>
+}

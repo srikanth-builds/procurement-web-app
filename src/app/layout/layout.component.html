@@ -1,0 +1,83 @@
+<div
+  class="flex min-h-screen w-full bg-[var(--background)] text-[var(--foreground)] font-sans selection:bg-[var(--primary)] selection:text-[var(--primary-foreground)]">
+  <!-- Sidebar -->
+  <aside
+    class="group/sidebar fixed left-0 top-0 z-40 h-screen w-64 -translate-x-full border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:w-64"
+    [class.translate-x-0]="sidebarOpen" [class.lg:w-20]="!sidebarOpen">
+    <!-- Sidebar Header -->
+    <div class="flex h-14 items-center border-b border-[var(--sidebar-border)] px-4 lg:h-[60px] lg:px-6">
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+        <lucide-icon [img]="icons.logo" class="h-6 w-6 text-[var(--sidebar-primary)]"></lucide-icon>
+        <span *ngIf="sidebarOpen" class="transition-opacity duration-200">ProcureAI</span>
+      </a>
+      <button class="ml-auto p-2 lg:hidden" (click)="toggleSidebar()">
+        <lucide-icon [img]="icons.menu" class="h-5 w-5"></lucide-icon>
+      </button>
+    </div>
+
+    <!-- Navigation -->
+    <div class="flex-1 overflow-y-auto py-4">
+      <nav class="grid items-start px-2 text-sm font-medium lg:px-4">
+        <a *ngFor="let item of menuItems" [routerLink]="item.route"
+          routerLinkActive="bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-[var(--sidebar-foreground)] transition-all hover:text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent)]"
+          [title]="item.label">
+          <lucide-icon [img]="item.icon" class="h-4 w-4"></lucide-icon>
+          <span *ngIf="sidebarOpen" class="truncate">{{ item.label }}</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="mt-auto border-t border-[var(--sidebar-border)] p-4">
+      <div class="flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-[var(--sidebar-accent)]">
+        <div
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar-primary)] text-[var(--sidebar-primary-foreground)]">
+          <lucide-icon [img]="icons.user" class="h-4 w-4"></lucide-icon>
+        </div>
+        <div *ngIf="sidebarOpen" class="flex flex-col overflow-hidden">
+          <span class="truncate text-sm font-medium">Srikanth</span>
+          <span class="truncate text-xs text-[var(--muted-foreground)]">srikanth@example.com</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out">
+    <!-- Header -->
+    <header
+      class="flex h-14 items-center gap-4 border-b border-[var(--border)] bg-[var(--background)] px-4 lg:h-[60px] lg:px-6">
+      <button
+        class="hidden lg:flex h-9 w-9 items-center justify-center rounded-md border border-[var(--input)] bg-transparent text-sm font-medium shadow-sm transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+        (click)="toggleSidebar()">
+        <lucide-icon [img]="icons.menu" class="h-4 w-4"></lucide-icon>
+      </button>
+
+      <div class="w-full flex-1">
+        <form>
+          <div class="relative">
+            <lucide-icon [img]="icons.search"
+              class="absolute left-2.5 top-2.5 h-4 w-4 text-[var(--muted-foreground)]"></lucide-icon>
+            <input type="search" placeholder="Search products, orders..."
+              class="w-full appearance-none bg-[var(--background)] pl-8 shadow-none md:w-2/3 lg:w-1/3 h-9 rounded-md border border-[var(--input)] px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--muted-foreground)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50" />
+          </div>
+        </form>
+      </div>
+
+      <button
+        class="h-9 w-9 flex items-center justify-center rounded-full hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]">
+        <lucide-icon [img]="icons.bell" class="h-4 w-4"></lucide-icon>
+      </button>
+      <button
+        class="h-9 w-9 flex items-center justify-center rounded-full hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]">
+        <lucide-icon [img]="icons.settings" class="h-4 w-4"></lucide-icon>
+      </button>
+    </header>
+
+    <!-- Page Content -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[var(--muted)]/20">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

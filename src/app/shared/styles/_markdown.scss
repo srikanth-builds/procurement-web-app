@@ -1,0 +1,152 @@
+// Markdown styling with theme support
+markdown ::ng-deep,
+.markdown-content {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgb(var(--foreground));
+
+  // Headings with proper hierarchy
+  h1 {
+    font-size: 2.25rem;
+    line-height: 1.2;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    color: rgb(var(--foreground));
+  }
+
+  h2 {
+    font-size: 1.875rem;
+    line-height: 1.3;
+    margin-top: 1.75rem;
+    margin-bottom: 0.875rem;
+    font-weight: 600;
+    color: rgb(var(--foreground));
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1.4;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: rgb(var(--foreground));
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+    margin-top: 1.25rem;
+    margin-bottom: 0.625rem;
+    font-weight: 600;
+    color: rgb(var(--foreground));
+  }
+
+  // Paragraphs with optimal spacing
+  p {
+    margin-bottom: 1.25rem;
+    line-height: 1.7;
+    max-width: 65ch;
+  }
+
+  // Lists with proper spacing
+  ul,
+  ol {
+    margin-bottom: 1.25rem;
+    padding-left: 1.75rem;
+
+    li {
+      margin-bottom: 0.5rem;
+      line-height: 1.7;
+
+      &::marker {
+        color: rgb(var(--muted-foreground));
+      }
+    }
+  }
+
+  // Blockquotes
+  blockquote {
+    border-left: 4px solid rgb(var(--primary));
+    padding-left: 1.25rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: rgb(var(--muted-foreground));
+  }
+
+  // Links
+  a {
+    color: rgb(var(--primary));
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-bottom-color: rgb(var(--primary));
+    }
+  }
+
+  // Tables
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+
+    th,
+    td {
+      padding: 0.75rem;
+      border: 1px solid rgb(var(--border));
+      text-align: left;
+    }
+
+    th {
+      background-color: rgb(var(--muted));
+      font-weight: 600;
+      color: rgb(var(--foreground));
+    }
+
+    tr:nth-child(even) {
+      background-color: rgba(var(--muted), 0.3);
+    }
+  }
+
+  // Code blocks
+  pre {
+    margin: 1.5rem 0;
+    border-radius: 8px;
+    overflow-x: auto;
+    background-color: rgb(var(--muted));
+    padding: 1rem;
+
+    code {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: rgb(var(--foreground));
+    }
+  }
+
+  // Inline code
+  code:not(pre code) {
+    background-color: rgba(var(--primary), 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: rgb(var(--primary));
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  }
+
+  // Images
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 1.5rem 0;
+  }
+
+  // Horizontal rules
+  hr {
+    border: none;
+    border-top: 2px solid rgb(var(--border));
+    margin: 2rem 0;
+  }
+}

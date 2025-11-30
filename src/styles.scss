@@ -1,0 +1,237 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+@plugin "@tailwindcss/typography";
+
+@import "@angular/cdk/overlay-prebuilt.css";
+
+@utility prose-base {
+    @apply prose prose-zinc dark:prose-invert max-w-none;
+    @apply prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tight;
+    @apply prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl;
+    @apply prose-p:leading-7 prose-p:text-foreground/90;
+    @apply prose-a:text-primary prose-a:no-underline hover:prose-a:underline;
+    @apply prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-sm prose-code:before:content-none prose-code:after:content-none;
+    @apply prose-pre:bg-muted prose-pre:text-muted-foreground prose-pre:border prose-pre:border-border;
+    @apply prose-blockquote:border-l-primary prose-blockquote:bg-muted/20 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:not-italic;
+    @apply prose-strong:text-foreground prose-strong:font-bold;
+    @apply prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6;
+    @apply prose-ol:my-4 prose-ol:list-decimal prose-ol:pl-6;
+    @apply prose-li:my-1;
+    @apply prose-img:rounded-lg prose-img:border prose-img:border-border;
+    @apply prose-hr:border-border;
+    @apply prose-table:border prose-table:border-border prose-table:rounded-lg prose-table:overflow-hidden;
+    @apply prose-th:bg-muted prose-th:p-2 prose-th:text-left;
+    @apply prose-td:p-2 prose-td:border-t prose-td:border-border;
+}
+
+:root {
+    --background: #fcfcfc;
+    --foreground: #313e38;
+    --card: #ffffff;
+    --card-foreground: #313e38;
+    --popover: #ffffff;
+    --popover-foreground: #313e38;
+    --primary: #00b262;
+    --primary-foreground: #effffa;
+    --secondary: #d2e0ea;
+    --secondary-foreground: #12161f;
+    --muted: #d3e0ea;
+    --muted-foreground: #5c6375;
+    --accent: #d3e0ea;
+    --accent-foreground: #313e38;
+    --destructive: #f1113e;
+    --border: #e5ecf1;
+    --input: #c3d0da;
+    --ring: #00b262;
+    --chart-1: #00b262;
+    --chart-2: #4d5f9c;
+    --chart-3: #14bac4;
+    --chart-4: #ccc072;
+    --chart-5: #8f68cb;
+    --sidebar: #f3faff;
+    --sidebar-foreground: #313e38;
+    --sidebar-primary: #00b262;
+    --sidebar-primary-foreground: #f3faff;
+    --sidebar-accent: #d3e0ea;
+    --sidebar-accent-foreground: #313e38;
+    --sidebar-border: #c3d0da;
+    --sidebar-ring: #00b262;
+
+    --font-sans: Lato, sans-serif;
+    --font-serif: Merriweather, Geist, Geist Fallback, ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: Roboto Mono, Geist Mono, Geist Mono Fallback, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    --radius: 0.25rem;
+
+    --shadow-2xs: 0px 1px 3px 0px rgb(31 67 51 / 0.02);
+    --shadow-xs: 0px 1px 3px 0px rgb(31 67 51 / 0.02);
+    --shadow-sm: 0px 1px 3px 0px rgb(31 67 51 / 0.04), 0px 1px 2px -1px rgb(31 67 51 / 0.04);
+    --shadow: 0px 1px 3px 0px rgb(31 67 51 / 0.04), 0px 1px 2px -1px rgb(31 67 51 / 0.04);
+    --shadow-md: 0px 1px 3px 0px rgb(31 67 51 / 0.04), 0px 2px 4px -1px rgb(31 67 51 / 0.04);
+    --shadow-lg: 0px 1px 3px 0px rgb(31 67 51 / 0.04), 0px 4px 6px -1px rgb(31 67 51 / 0.04);
+    --shadow-xl: 0px 1px 3px 0px rgb(31 67 51 / 0.04), 0px 8px 10px -1px rgb(31 67 51 / 0.04);
+    --shadow-2xl: 0px 1px 3px 0px rgb(31 67 51 / 0.10);
+
+}
+
+.dark {
+    --background: #080b14;
+    --foreground: #e9f0f5;
+    --card: #12161f;
+    --card-foreground: #e9f0f5;
+    --popover: #12161f;
+    --popover-foreground: #e9f0f5;
+    --primary: #00b262;
+    --primary-foreground: #080b14;
+    --secondary: #282d3d;
+    --secondary-foreground: #e9f0f5;
+    --muted: #282d3d;
+    --muted-foreground: #798093;
+    --accent: #282d3d;
+    --accent-foreground: #e9f0f5;
+    --destructive: #ff1648;
+    --border: #e9f0f526;
+    --input: #e9f0f533;
+    --ring: #00b262;
+    --chart-1: #00b262;
+    --chart-2: #697dbc;
+    --chart-3: #14bac4;
+    --chart-4: #ccc072;
+    --chart-5: #8f68cb;
+    --sidebar: #12161f;
+    --sidebar-foreground: #e9f0f5;
+    --sidebar-primary: #00b262;
+    --sidebar-primary-foreground: #080b14;
+    --sidebar-accent: #282d3d;
+    --sidebar-accent-foreground: #e9f0f5;
+    --sidebar-border: #e9f0f526;
+    --sidebar-ring: #00b262;
+
+    --shadow-2xs: 0px 1px 2px 0px rgb(0 0 0 / 0.01);
+    --shadow-xs: 0px 1px 2px 0px rgb(0 0 0 / 0.01);
+    --shadow-sm: 0px 1px 2px 0px rgb(0 0 0 / 0.01), 0px 1px 2px -1px rgb(0 0 0 / 0.01);
+    --shadow: 0px 1px 2px 0px rgb(0 0 0 / 0.01), 0px 1px 2px -1px rgb(0 0 0 / 0.01);
+    --shadow-md: 0px 1px 2px 0px rgb(0 0 0 / 0.01), 0px 2px 4px -1px rgb(0 0 0 / 0.01);
+    --shadow-lg: 0px 1px 2px 0px rgb(0 0 0 / 0.01), 0px 4px 6px -1px rgb(0 0 0 / 0.01);
+    --shadow-xl: 0px 1px 2px 0px rgb(0 0 0 / 0.01), 0px 8px 10px -1px rgb(0 0 0 / 0.01);
+    --shadow-2xl: 0px 1px 2px 0px rgb(0 0 0 / 0.03);
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    --font-sans: var(--font-sans);
+    --font-mono: var(--font-mono);
+    --font-serif: var(--font-serif);
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    --shadow-2xs: var(--shadow-2xs);
+    --shadow-xs: var(--shadow-xs);
+    --shadow-sm: var(--shadow-sm);
+    --shadow: var(--shadow);
+    --shadow-md: var(--shadow-md);
+    --shadow-lg: var(--shadow-lg);
+    --shadow-xl: var(--shadow-xl);
+    --shadow-2xl: var(--shadow-2xl);
+}
+
+@import "@spartan-ng/brain/hlm-tailwind-preset.css";
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    html,
+    body {
+        height: 100%;
+    }
+
+    ::selection {
+        @apply bg-primary text-primary-foreground;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+    }
+}
+
+// Gradient Border Animation
+@property --border-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes border-rotate {
+    to {
+        --border-angle: 360deg;
+    }
+}
+
+.animate-gradient-border {
+    --border-angle: 0deg;
+    position: relative;
+    z-index: 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius-xl);
+    background:
+        linear-gradient(var(--card), var(--card)) padding-box,
+        conic-gradient(from var(--border-angle), var(--border) 50%, var(--primary) 80%, var(--primary-foreground) 86%, var(--primary) 90%, var(--border)) border-box;
+    animation: border-rotate 4s linear infinite;
+
+    // Ensure content sits above
+    &>* {
+        z-index: 1;
+    }
+}

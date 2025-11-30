@@ -1,0 +1,52 @@
+<div class="flex flex-col border rounded-xl overflow-hidden bg-card text-card-foreground shadow-sm hover:shadow-md transition-all group relative"
+    [ngClass]="{ 'recommended': isRecommended }">
+
+    @if (isRecommended) {
+    <div
+        class="absolute top-0 right-0 recommendation-badge text-[10px] px-2 py-1 rounded-bl-lg font-bold shadow-sm z-10 uppercase tracking-wider">
+        Recommended
+    </div>
+    }
+
+    <div class="flex h-32">
+        <!-- Image Section (Left) -->
+        <div class="relative w-32 shrink-0 bg-muted overflow-hidden">
+            <img [src]="imageUrl" [alt]="product().name"
+                class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500">
+            @if (isAdded()) {
+            <div
+                class="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium shadow-sm flex items-center gap-1">
+                <lucide-icon name="check" class="size-3"></lucide-icon> Added
+            </div>
+            }
+        </div>
+
+        <!-- Content Section (Right) -->
+        <div class="flex flex-col flex-1 p-3 justify-between min-w-0">
+            <div>
+                <div class="flex justify-between items-start gap-2">
+                    <h3 class="font-semibold text-sm truncate flex-1" title="{{ product().name }}">{{ product().name }}
+                    </h3>
+                    @if (product().source_url) {
+                    <a [href]="product().source_url" target="_blank" (click)="$event.stopPropagation()"
+                        class="text-muted-foreground hover:text-primary transition-colors" title="View Source">
+                        <lucide-icon name="external-link" class="size-3"></lucide-icon>
+                    </a>
+                    }
+                </div>
+                <p class="text-xs text-muted-foreground line-clamp-2 mt-1">{{ product().description }}</p>
+            </div>
+
+            <div class="flex items-center justify-between mt-2">
+                <span class="font-bold text-base text-primary">{{ product().price | currency }}</span>
+                <div class="flex gap-2">
+                    <button
+                        class="inline-flex items-center justify-center rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full"
+                        (click)="$event.stopPropagation(); addToPr.emit(product())" [disabled]="isAdded()">
+                        {{ isAdded() ? 'Added' : 'Add' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

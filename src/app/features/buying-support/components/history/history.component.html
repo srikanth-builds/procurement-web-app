@@ -1,0 +1,52 @@
+<hlm-dialog [state]="isOpen() ? 'open' : 'closed'" (closed)="close.emit()">
+    <hlm-dialog-content class="w-[95vw] max-w-[95vw] sm:max-w-[600px]" *brnDialogContent="let ctx">
+        <hlm-dialog-header>
+            <h3 hlmDialogTitle>Chat History</h3>
+            <p hlmDialogDescription>
+                Select a conversation to continue or edit titles.
+            </p>
+        </hlm-dialog-header>
+
+        <div class="py-4 overflow-y-auto max-h-[60vh] space-y-1">
+            @for (thread of threads(); track thread.thread_id) {
+            <div class="group flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
+                (click)="selectThread.emit(thread.thread_id)">
+                @if (editingThreadId() === thread.thread_id) {
+                <input type="text" [ngModel]="editTitle()" (ngModelChange)="editTitle.set($event)"
+                    (click)="$event.stopPropagation()" (keydown.enter)="saveTitle(thread, $event)"
+                    (keydown.escape)="cancelEditing($event)"
+                    class="flex-1 bg-background border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    autoFocus>
+                <button (click)="saveTitle(thread, $event)" class="text-green-500 hover:bg-green-500/10 p-1 rounded">
+                    <lucide-icon name="check" class="h-3 w-3"></lucide-icon>
+                </button>
+                <button (click)="cancelEditing($event)" class="text-red-500 hover:bg-red-500/10 p-1 rounded">
+                    <lucide-icon name="x" class="h-3 w-3"></lucide-icon>
+                </button>
+                } @else {
+                <span class="flex-1 text-sm truncate">{{ thread.title || 'New Chat' }}</span>
+                <span class="text-xs text-muted-foreground">{{ (thread.last_updated || thread.updated_at) |
+                    relativeTime }}</span>
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button (click)="startEditing(thread, $event)"
+                        class="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground">
+                        <lucide-icon name="pen-line" class="h-3 w-3"></lucide-icon>
+                    </button>
+                    <button (click)="onDeleteThread(thread, $event)"
+                        class="p-1 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-500">
+                        <lucide-icon name="trash-2" class="h-3 w-3"></lucide-icon>
+                    </button>
+                </div>
+                }
+            </div>
+            }
+            @if (threads().length === 0) {
+            <div class="p-4 text-center text-sm text-muted-foreground">No history found</div>
+            }
+        </div>
+
+        <hlm-dialog-footer>
+            <button hlmBtn variant="outline" (click)="close.emit()">Close</button>
+        </hlm-dialog-footer>
+    </hlm-dialog-content>
+</hlm-dialog>
