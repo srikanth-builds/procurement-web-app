@@ -121,6 +121,7 @@ export interface AppState {
   chatStream: ChatStreamItem[]; // NEW: The single, chronological stream for the UI
   activities: ActivityMessage[];
   thinkingSteps: ThinkingStep[];
+  isResourceExhausted?: boolean;
   suggestions: string[];
   purchaseRequisition: PurchaseRequisition;
   artifacts: Artifact[];

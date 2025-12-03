@@ -27,6 +27,12 @@ export class AgentService {
 
   private isToolExecutionPending = false;
 
+  // Track the last action for retry purposes
+  private lastAction: {
+    type: 'message' | 'tool_result';
+    args: any[];
+  } | null = null;
+
   constructor() {
     this.initAgent();
   }
@@ -117,28 +123,17 @@ export class AgentService {
     return [...baseContext, ...additionalContext];
   }
 
-  async sendMessage(
-    content: string,
-    context?: any[],
-    forwardedProps?: Record<string, any>
-  ): Promise<void> {
-    const userMessage: Message = { id: `msg_${uuidv4()}`, role: 'user', content };
-
-    this.stateService.addUserMessage(content);
-    // The agent's message history is managed internally by the HttpAgent instance,
-    // so we just need to add our user message to it before running.
-    this.agent.messages.push(userMessage);
-
+  private async executeRun(additionalContext: any[] = [], forwardedProps: Record<string, any> = {}): Promise<void> {
     this.isRunning.set(true);
     this.error.set(null);
 
-    const combinedContext = this.buildContext(context);
+    const combinedContext = this.buildContext(additionalContext);
 
     try {
       await this.agent.runAgent({
         tools: [suggestionTool, productOptionsTool, supplierListTool, updatePrTool],
         context: combinedContext,
-        forwardedProps: forwardedProps || {},
+        forwardedProps: forwardedProps,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown agent error occurred.';
@@ -148,9 +143,49 @@ export class AgentService {
     }
   }
 
+  async sendMessage(
+    content: string,
+    context?: any[],
+    forwardedProps?: Record<string, any>
+  ): Promise<void> {
+    // Store for retry
+    this.lastAction = {
+      type: 'message',
+      args: [context, forwardedProps] // We don't need content for retry if we just re-run
+    };
 
+    const userMessage: Message = { id: `msg_${uuidv4()}`, role: 'user', content };
+
+    this.stateService.addUserMessage(content);
+    this.agent.messages.push(userMessage);
+
+    await this.executeRun(context, forwardedProps);
+  }
+
+  async retryLastAction(): Promise<void> {
+    if (!this.lastAction) {
+      console.warn('No action to retry');
+      this.stateService.addErrorMessage('Unable to retry automatically. Please try sending your message again.');
+      return;
+    }
+
+    this.stateService.clearResourceExhaustedError();
+
+    // As per user request, we send a "continue" message to resume the conversation
+    // This ensures the backend receives a new_message and processes the history
+    const context = this.lastAction.args[0];
+    const forwardedProps = this.lastAction.args[1];
+
+    await this.sendMessage('continue', context, forwardedProps);
+  }
 
   async sendToolResult(toolCallId: string, result: any, context?: any[]): Promise<void> {
+    // Store for retry
+    this.lastAction = {
+      type: 'tool_result',
+      args: [context, {}] // Tool results usually don't have forwardedProps
+    };
+
     const toolMessage: Message = {
       id: `tool_${uuidv4()}`,
       role: 'tool',
@@ -160,25 +195,9 @@ export class AgentService {
 
     console.log('Sending Tool Result:', toolMessage);
 
-    // Add to agent's history
     this.agent.messages.push(toolMessage);
 
-    this.isRunning.set(true);
-    this.error.set(null);
-
-    const combinedContext = this.buildContext(context);
-
-    try {
-      await this.agent.runAgent({
-        tools: [suggestionTool, productOptionsTool, supplierListTool, updatePrTool],
-        context: combinedContext
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown agent error occurred.';
-      this.error.set(errorMessage);
-      this.isRunning.set(false);
-      this.stateService.addErrorMessage(errorMessage);
-    }
+    await this.executeRun(context);
   }
 
   resetConversation(): void {
@@ -186,6 +205,7 @@ export class AgentService {
     this.currentThreadId = uuidv4(); // A new ID is generated ONLY on explicit reset.
     this.initAgent(); // Re-initialize agent with the new threadId.
     this.error.set(null);
+    this.lastAction = null;
   }
 
   getThreadId(): string {
@@ -213,18 +233,22 @@ export class AgentService {
       next: (events) => {
         this.stateService.resetState();
         this.currentThreadId = threadId;
-        // Reinitialize agent with the loaded threadId and setup subscriptions
         this.initAgent();
+        this.lastAction = null; // Reset initially
 
         events.forEach((item: any) => {
           // 1. Handle User Input (from 'run_agent_input' events)
           if (item.type === 'input' && item.payload?.messages) {
             const messages = item.payload.messages;
             if (Array.isArray(messages) && messages.length > 0) {
-              // The last message in the input payload is typically the new user message for this run
               const lastMessage = messages[messages.length - 1];
               if (lastMessage.role === 'user') {
                 this.stateService.addUserMessage(lastMessage.content, lastMessage.id);
+                // Set as potential retry point
+                this.lastAction = {
+                  type: 'message',
+                  args: [[], {}] // Assume no extra context/props for history items
+                };
               }
             }
           }
@@ -233,13 +257,18 @@ export class AgentService {
             const normalizedEvent = this.normalizeEvent(item.payload);
             this.stateService.handleEvent(normalizedEvent);
 
-            // Restore state for client-side tools (History Mode - NO result sending)
             if (normalizedEvent.type === EventType.TOOL_CALL_END) {
               const toolCallId = normalizedEvent.toolCallId;
               this.stateService.executeToolSideEffects(toolCallId);
+              // Note: We don't easily know if this tool call *triggered* a run that failed.
+              // But if we see a tool call end, it implies a result might follow.
+              // For now, relying on 'user' message as the main retry point is safer for history loading.
             }
           }
         });
+
+        // Ensure we don't start in an error state just because the history contained one
+        this.stateService.clearResourceExhaustedError();
       },
       error: (err) => {
         console.error('Failed to load history', err);
@@ -263,7 +292,7 @@ export class AgentService {
       event.messageId = event.message_id;
     }
 
-    if(event.activity_type){
+    if (event.activity_type) {
       event.activityType = event.activity_type;
     }
 

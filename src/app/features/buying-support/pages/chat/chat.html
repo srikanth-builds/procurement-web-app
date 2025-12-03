@@ -24,6 +24,13 @@
             </div>
         </div>
 
+        <!-- Error Banner -->
+        @if (isResourceExhausted()) {
+        <div class="absolute bottom-24 left-0 w-full z-30 px-4 max-w-3xl mx-auto left-0 right-0">
+            <app-resource-exhausted-error></app-resource-exhausted-error>
+        </div>
+        }
+
         <!-- Input Area -->
         <div
             class="absolute bottom-0 left-0 w-full z-20 bg-gradient-to-t from-background via-background/95 to-transparent pt-10 pb-6">

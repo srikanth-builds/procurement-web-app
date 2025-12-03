@@ -35,6 +35,7 @@ const initialState: AppState = {
   activities: [],
   thinkingSteps: [],
   suggestions: [],
+  isResourceExhausted: false, // Added
   toolCalls: [], // Initialized
   chatStream: [],
   artifacts: [],
@@ -89,6 +90,16 @@ export class StateService {
         break;
       case EventType.RUN_ERROR:
         const errorEvent = event as RunErrorEvent;
+        const errorMessage = typeof errorEvent.message === 'string' ? errorEvent.message : JSON.stringify(errorEvent.message); // Use errorEvent.message
+
+        // Check for 429 or Resource Exhausted
+        if (errorMessage.includes('429') || errorMessage.includes('Resource exhausted')) {
+          this.state.update(s => ({
+            ...s,
+            isResourceExhausted: true
+          }));
+        }
+
         this.state.update((s) => {
           // 1. Transition any 'running' tools to 'error' state
           const updatedToolCalls = s.toolCalls.map((tc) =>
@@ -563,6 +574,7 @@ export class StateService {
         const products = args['products'];
         if (products) {
           this.updateProductOptions(products);
+
         }
       } else if (toolName === 'supplier_list') {
         // Inject mock data if args are empty or if explicitly requested for demo
@@ -799,6 +811,10 @@ export class StateService {
 
   public clearSuggestions(): void {
     this.state.update((s) => ({ ...s, suggestions: [] }));
+  }
+
+  public clearResourceExhaustedError(): void {
+    this.state.update(s => ({ ...s, isResourceExhausted: false }));
   }
 
   public toggleThinkingStep(stepId: string): void {

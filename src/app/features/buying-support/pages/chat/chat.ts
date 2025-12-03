@@ -15,13 +15,14 @@ import { ChatHeaderComponent } from '../../components/chat-header/chat-header.co
 import { HistoryComponent } from '../../components/history/history.component';
 import { StateService } from '../../agent-state/state.service';
 import { SuggestionsComponent } from '../../components/suggestions/suggestions.component';
+import { ResourceExhaustedErrorComponent } from '../../components/resource-exhausted-error/resource-exhausted-error.component';
 
 
 
 @Component({
     selector: 'buying-support-chat',
     standalone: true,
-    imports: [CommonModule, FormsModule, HlmResizableImports, ConversationStreamComponent, PurchaseRequisitionFormComponent, ChatHeaderComponent, HistoryComponent, TextFieldModule, LucideAngularModule, SuggestionsComponent],
+    imports: [CommonModule, FormsModule, HlmResizableImports, ConversationStreamComponent, PurchaseRequisitionFormComponent, ChatHeaderComponent, HistoryComponent, TextFieldModule, LucideAngularModule, SuggestionsComponent, ResourceExhaustedErrorComponent],
     templateUrl: './chat.html',
     styleUrl: './chat.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +40,7 @@ export class Chat {
     suggestions = computed(() => this.stateService.state().suggestions);
     isLoading = this.agentService.isRunning;
     error = this.agentService.error;
+    isResourceExhausted = computed(() => this.stateService.state().isResourceExhausted);
 
     // Expose state signals to the template
     state = computed(() => this.stateService.state())
