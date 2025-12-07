@@ -11,6 +11,7 @@ export interface UserProfile {
     department: string;
     cost_center: string;
     location: string;
+    manager_name: string;
     manager_id: string;
     active: boolean;
     approval_level_tier: number;
