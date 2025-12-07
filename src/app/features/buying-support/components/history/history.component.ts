@@ -36,6 +36,7 @@ import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
 export class HistoryComponent {
     threads = input.required<any[], any[]>({ transform: (value) => [...value].reverse() });
     isOpen = input.required<boolean>();
+    isLoading = input<boolean>(false);
 
     close = output<void>();
     selectThread = output<string>();

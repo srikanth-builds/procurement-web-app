@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-lg font-bold text-foreground">{{ prData().prId }}</h2>
+            <h2 class="text-lg font-bold text-foreground">{{ prData().prId || 'Purchase Request' }}</h2>
             <span
                 class="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground ring-1 ring-inset ring-gray-500/10">DRAFT</span>
         </div>

@@ -1,0 +1,194 @@
+<div class="container max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold tracking-tight">Settings</h1>
+        <p class="text-muted-foreground mt-2">Manage your account settings and preferences.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-8 lg:gap-12">
+
+        <!-- Navigation (Left Side) -->
+        <aside class="w-full md:w-64 shrink-0">
+            <nav class="flex flex-col space-y-1">
+                @for (section of sections; track section.id) {
+                <button (click)="setActiveSection(section.id)" [class.bg-accent]="activeSection() === section.id"
+                    [class.text-accent-foreground]="activeSection() === section.id"
+                    class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md hover:bg-accent/50 hover:text-accent-foreground transition-colors text-left group">
+                    <lucide-icon [name]="section.icon" class="size-4 opacity-70 group-hover:opacity-100"></lucide-icon>
+                    <div class="flex flex-col">
+                        <span>{{ section.label }}</span>
+                    </div>
+                </button>
+                }
+            </nav>
+        </aside>
+
+        <!-- Content (Right Side) -->
+        <main class="flex-1 min-w-0">
+
+            @if (isLoading()) {
+            <div class="flex items-center justify-center py-20">
+                <lucide-icon name="loader-2" class="size-8 animate-spin text-muted-foreground"></lucide-icon>
+            </div>
+            } @else if (error()) {
+            <div class="p-6 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive">
+                <div class="flex items-center gap-2 font-semibold mb-2">
+                    <lucide-icon name="alert-circle" class="size-5"></lucide-icon>
+                    Error Loading Profile
+                </div>
+                <p>Unable to fetch user profile data. Please try again later.</p>
+            </div>
+            } @else if (userProfile(); as profile) {
+
+            <!-- Profile Section -->
+            @if (activeSection() === 'profile') {
+            <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div>
+                    <h2 class="text-lg font-medium">Profile Information</h2>
+                </div>
+                <div class="h-px bg-border"></div>
+
+                <!-- Profile Card -->
+                <div class="grid gap-6">
+
+                    <!-- Identity -->
+                    <div class="grid gap-4 p-6 border rounded-xl bg-card text-card-foreground shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
+                                {{ (profile.name || '?').charAt(0) }}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg">{{ profile.name }}</h3>
+                                <p class="text-sm text-muted-foreground">{{ profile.job_title }}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
+                                        {{ profile.employee_id }}
+                                    </span>
+                                    @if (profile.active) {
+                                    <span
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                        Active
+                                    </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <!-- Contact Info -->
+                        <div class="space-y-4">
+                            <h4 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">Contact
+                                Information</h4>
+                            <div class="grid gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-medium text-muted-foreground">Email</label>
+                                    <div class="text-sm font-medium">{{ profile.email }}</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-medium text-muted-foreground">Location</label>
+                                    <div class="text-sm font-medium flex items-center gap-2">
+                                        <lucide-icon name="map-pin"
+                                            class="size-3.5 text-muted-foreground"></lucide-icon>
+                                        {{ profile.location }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Organization -->
+                        <div class="space-y-4">
+                            <h4 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">Organization
+                            </h4>
+                            <div class="grid gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-medium text-muted-foreground">Department</label>
+                                    <div class="text-sm font-medium">{{ profile.department }}</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-medium text-muted-foreground">Manager ID</label>
+                                    <div class="text-sm font-medium">{{ profile.manager_id }}</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-medium text-muted-foreground">Cost Center</label>
+                                    <div class="text-sm font-medium font-mono bg-muted/50 px-2 py-1 rounded w-fit">{{
+                                        profile.cost_center }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Purchasing Stats -->
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">Purchasing
+                            Statistics (YTD)</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="p-4 rounded-lg border bg-card/50">
+                                <div class="text-xs text-muted-foreground mb-1">Total Spend</div>
+                                <div class="text-2xl font-bold">{{ profile.purchasing_stats_total_spend_ytd |
+                                    currency:profile.currency_preference }}</div>
+                            </div>
+                            <div class="p-4 rounded-lg border bg-card/50">
+                                <div class="text-xs text-muted-foreground mb-1">Orders</div>
+                                <div class="text-2xl font-bold">{{ profile.purchasing_stats_order_count_ytd }}</div>
+                            </div>
+                            <div class="p-4 rounded-lg border bg-card/50">
+                                <div class="text-xs text-muted-foreground mb-1">Avg. Order Value</div>
+                                <div class="text-2xl font-bold">{{ profile.purchasing_stats_avg_order_value |
+                                    currency:profile.currency_preference }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            }
+
+            <!-- Preferences Section -->
+            @if (activeSection() === 'preferences') {
+            <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div>
+                    <h2 class="text-lg font-medium">Preferences</h2>
+                    <p class="text-sm text-muted-foreground">Manage your application preferences.</p>
+                </div>
+                <div class="h-px bg-border"></div>
+
+                <div class="p-12 text-center border rounded-xl border-dashed">
+                    <div class="mx-auto size-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                        <lucide-icon name="settings" class="size-6 text-muted-foreground"></lucide-icon>
+                    </div>
+                    <h3 class="text-lg font-medium">Coming Soon</h3>
+                    <p class="text-muted-foreground mt-1">Preferences settings are under development.</p>
+                </div>
+            </div>
+            }
+
+            <!-- Memory Section -->
+            @if (activeSection() === 'memory') {
+            <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div>
+                    <h2 class="text-lg font-medium">Memory</h2>
+                    <p class="text-sm text-muted-foreground">View and manage what the agent remembers about you.</p>
+                </div>
+                <div class="h-px bg-border"></div>
+
+                <div class="p-12 text-center border rounded-xl border-dashed">
+                    <div class="mx-auto size-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                        <lucide-icon name="brain" class="size-6 text-muted-foreground"></lucide-icon>
+                    </div>
+                    <h3 class="text-lg font-medium">Coming Soon</h3>
+                    <p class="text-muted-foreground mt-1">Memory management features are under development.</p>
+                </div>
+            </div>
+            }
+
+            }
+        </main>
+    </div>
+</div>

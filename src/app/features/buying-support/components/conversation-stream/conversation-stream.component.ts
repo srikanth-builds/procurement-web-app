@@ -12,7 +12,31 @@ import { AgentService } from 'src/app/features/buying-support/agent-state/agent.
 import { ProductCarouselComponent } from '../product-carousel/product-carousel.component';
 
 import { SupplierCarouselComponent } from '../supplier-carousel/supplier-carousel.component';
-import { LucideAngularModule, Bot, ShoppingCart, FileText, BookOpen, Check, Loader2 } from 'lucide-angular';
+import { ConfirmationToolComponent } from '../confirmation-tool/confirmation-tool.component';
+import { LucideAngularModule, Bot, ShoppingCart, FileText, BookOpen, Check, Loader2, AlertCircle } from 'lucide-angular';
+
+export interface AgentGroup {
+  type: 'agent-group';
+  items: (Message | ToolCallState | ThoughtsPanel)[];
+  agentName?: string;
+}
+
+export interface UserGroup {
+  type: 'user-group';
+  items: Message[];
+}
+
+export interface StandaloneGroup {
+  type: 'standalone-group';
+  item: ChatStreamItem;
+}
+
+export interface ThinkingGroup {
+  type: 'thinking-group';
+  item: ThoughtsPanel;
+}
+
+export type StreamGroup = AgentGroup | UserGroup | StandaloneGroup | ThinkingGroup;
 
 @Component({
   selector: 'app-conversation-stream',
@@ -25,6 +49,7 @@ import { LucideAngularModule, Bot, ShoppingCart, FileText, BookOpen, Check, Load
     MarkdownComponent,
     ProductCarouselComponent,
     SupplierCarouselComponent,
+    ConfirmationToolComponent,
     LucideAngularModule
   ],
   templateUrl: './conversation-stream.component.html',
@@ -33,21 +58,21 @@ import { LucideAngularModule, Bot, ShoppingCart, FileText, BookOpen, Check, Load
 })
 export class ConversationStreamComponent {
   readonly icons = { Bot, ShoppingCart, FileText, BookOpen, Check, Loader2 };
-  @ViewChild('chatMessagesContainer') chatMessagesContainer!: ElementRef<HTMLDivElement>;
-  @ViewChild('messageInput') messageInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('chatMessagesContainer') private chatMessagesContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('messageInput') private messageInput!: ElementRef<HTMLInputElement>;
   stateService = inject(StateService);
   agentService = inject(AgentService);
-  messages = input.required<Message[]>();
-  activities = input.required<ActivityMessage[]>();
-  isLoading = input.required<boolean>();
-  thinkingSteps = input<ThinkingStep[]>();
+  messages = input<Message[]>([]);
+  activities = input<ActivityMessage[]>([]);
+  isLoading = input<boolean>(false);
+  thinkingSteps = input<ThinkingStep[]>([]);
 
 
   sendMessage = output<string>();
   addToPr = output<ProductCard>();
   selectSupplier = output<SupplierItem>();
 
-  userMessage = signal<string>('');
+  private userMessage = signal<string>('');
   state = computed(() => this.stateService.state());
 
   state$ = toObservable(this.stateService.state);
@@ -55,6 +80,84 @@ export class ConversationStreamComponent {
   private isUserAtBottom = signal<boolean>(true);
   private scrollThreshold = 150; // pixels from bottom to consider "at bottom"
   isShowScrollButton = computed(() => !this.isUserAtBottom());
+
+  // Grouped Stream Logic
+  groupedStream = computed(() => {
+    const stream = this.state().chatStream;
+    const groups: StreamGroup[] = [];
+    let currentAgentGroup: AgentGroup | null = null;
+
+    for (const item of stream) {
+      // 1. User Messages -> Close Agent Group, add User Group
+      if (this.isMessage(item) && item.role === 'user') {
+        currentAgentGroup = null;
+        groups.push({ type: 'user-group', items: [item] });
+        continue;
+      }
+
+      // 2. Thinking Panel -> Check if it should be visible
+      if (this.isThoughtsPanel(item)) {
+        if (this.shouldShowThinking(item)) {
+          // Visible thinking -> Close Agent Group, add Thinking Group
+          currentAgentGroup = null;
+          groups.push({ type: 'thinking-group', item });
+          continue;
+        } else {
+          // Hidden thinking -> Treat as part of Agent Group (don't break the bubble)
+          // We add it to the group so it's part of the stream, but the template won't render it
+          // inside the bubble because we removed the rendering logic for thoughts in the bubble.
+          // Actually, if we add it to the items, we need to make sure the template ignores it.
+          // The template iterates over items. We removed the @if (isThoughtsPanel) block from the agent group template.
+          // So adding it here is safe; it just won't render, but it keeps the group alive.
+        }
+      }
+
+      // 3. Agent Messages / Tool Calls / Hidden Thoughts -> Add to Agent Group
+      if (
+        (this.isMessage(item) && item.role === 'assistant') ||
+        this.isToolCall(item) ||
+        (this.isThoughtsPanel(item) && !this.shouldShowThinking(item))
+      ) {
+        let itemAgentName: string | undefined;
+        if (this.isMessage(item)) {
+          itemAgentName = item.name;
+        } else if (this.isToolCall(item)) {
+          itemAgentName = item.agentName;
+        } else if (this.isThoughtsPanel(item)) {
+             itemAgentName = item.steps[0]?.author;
+        }
+
+        // Check if we need to start a new group due to name change
+        if (currentAgentGroup) {
+          if (itemAgentName && itemAgentName !== currentAgentGroup.agentName) {
+            currentAgentGroup = null;
+          }
+        }
+
+        if (!currentAgentGroup) {
+          currentAgentGroup = {
+            type: 'agent-group',
+            items: [],
+            agentName: itemAgentName || 'Assistant'
+          };
+          groups.push(currentAgentGroup);
+        } else {
+          if (currentAgentGroup.agentName === 'Assistant' && itemAgentName) {
+            currentAgentGroup.agentName = itemAgentName;
+          }
+        }
+
+        currentAgentGroup.items.push(item);
+        continue;
+      }
+
+      // 4. Standalone Panels (Product/Supplier) -> Close Agent Group, add as standalone
+      currentAgentGroup = null;
+      groups.push({ type: 'standalone-group', item });
+    }
+
+    return groups;
+  });
 
   constructor() {
 
@@ -173,9 +276,12 @@ export class ConversationStreamComponent {
   }
 
 
-  shouldShowThinking(item: ChatStreamItem, index: number): boolean {
+  shouldShowThinking(item: ChatStreamItem): boolean {
     const stream = this.state().chatStream;
-    const isLastItem = index === stream.length - 1;
+    if (stream.length === 0) return false;
+
+    const lastItem = stream[stream.length - 1];
+    const isLastItem = item === lastItem;
     const isRunning = this.state().runStatus === 'running';
 
     // Only show thinking if it's the last item and the agent is currently running
@@ -201,5 +307,67 @@ export class ConversationStreamComponent {
 
       return match ? match[1] : null;
     }
+  }
+
+  hasVisibleItems(group: AgentGroup): boolean {
+    return group.items.some(item => {
+      // 1. Assistant Messages are visible
+      if (this.isMessage(item) && item.role === 'assistant') {
+        return true;
+      }
+
+      // 2. Tool Calls are visible if they have a request or are specific tools
+      if (this.isToolCall(item)) {
+        if (item.toolName === 'ask_user_confirmation') {
+          return true;
+        }
+        // Check if it has a visible request string
+        if (this.getToolRequest(item)) {
+          return true;
+        }
+      }
+
+      // Thoughts are handled in ThinkingGroup, so they are not "visible" in AgentGroup
+      return false;
+    });
+  }
+
+  copiedMessageId = signal<string | null>(null);
+
+  copyToClipboard(content: any, messageId: string) {
+    if (!content) return;
+
+    let textToCopy = '';
+
+    if (typeof content === 'string') {
+      textToCopy = content;
+    } else if (Array.isArray(content)) {
+      // Handle array of content parts (e.g. [{type: 'text', text: '...'}]
+      textToCopy = content
+        .map(part => {
+          if (part.type === 'text') return part.text;
+          return '';
+        })
+        .join('');
+    } else if (typeof content === 'object') {
+      // Fallback for other objects
+      textToCopy = JSON.stringify(content);
+    }
+
+    if (!textToCopy) return;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      this.copiedMessageId.set(messageId);
+      setTimeout(() => {
+        this.copiedMessageId.set(null);
+      }, 2000);
+    });
+  }
+
+  getAgentGroupContent(group: AgentGroup): string {
+    return group.items
+      .filter(item => this.isMessage(item) && item.role === 'assistant')
+      .map(item => (item as Message).content)
+      .join('\n\n');
   }
 }

@@ -6,6 +6,8 @@ import { FormsModule } from '@angular/forms';
 import { HlmResizableImports } from '../../../../lib/ui/resizable/src';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { LucideAngularModule } from 'lucide-angular';
+import { HlmTooltipImports } from '../../../../lib/ui/tooltip/src';
+import { BrnTooltipContentTemplate } from '@spartan-ng/brain/tooltip';
 import { AgentService } from '../../agent-state/agent.service';
 
 import { ProductCard, SupplierItem } from '../../models/app-state.model';
@@ -22,7 +24,7 @@ import { ResourceExhaustedErrorComponent } from '../../components/resource-exhau
 @Component({
     selector: 'buying-support-chat',
     standalone: true,
-    imports: [CommonModule, FormsModule, HlmResizableImports, ConversationStreamComponent, PurchaseRequisitionFormComponent, ChatHeaderComponent, HistoryComponent, TextFieldModule, LucideAngularModule, SuggestionsComponent, ResourceExhaustedErrorComponent],
+    imports: [CommonModule, FormsModule, HlmResizableImports, ConversationStreamComponent, PurchaseRequisitionFormComponent, ChatHeaderComponent, HistoryComponent, TextFieldModule, LucideAngularModule, SuggestionsComponent, ResourceExhaustedErrorComponent, HlmTooltipImports, BrnTooltipContentTemplate],
     templateUrl: './chat.html',
     styleUrl: './chat.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,6 +48,15 @@ export class Chat {
     state = computed(() => this.stateService.state())
 
     userInput = signal('');
+    currentMode = signal<'ask' | 'agent'>('ask');
+
+    toggleMode() {
+        this.currentMode.update(mode => {
+            const newMode = mode === 'ask' ? 'agent' : 'ask';
+            this.agentService.setMode(newMode);
+            return newMode;
+        });
+    }
 
     constructor() {
         // Watch for state changes and trigger change detection
@@ -67,20 +78,38 @@ export class Chat {
         });
 
         // Load threads on init
-        this.loadThreads();
+        // Threads are loaded via httpResource signal
     }
 
     // --- Event Handlers from Children ---
 
-    handleSendMessage(message: string): void {
-        if (!message.trim()) return;
-        this.agentService.sendMessage(message);
-        this.userInput.set('');
-        this.stateService.clearSuggestions();
+    async handleSendMessage(message?: string) {
+        const inputContent = message || this.userInput();
+
+        if (!inputContent.trim() || this.isLoading()) return;
+
+        const content = inputContent;
+        this.userInput.set(''); // Clear input immediately
+
+        // Check if we are waiting for a confirmation tool response
+        const pendingToolId = this.stateService.pendingConfirmationToolId();
+        if (pendingToolId) {
+            // Send as tool result
+            this.stateService.addUserMessage(content); // Add visual user message
+            // Manually update the tool call status so the UI reflects the response
+            this.stateService.updateToolCallStatus(pendingToolId, 'success', content);
+
+            await this.agentService.sendToolResult(pendingToolId, content);
+            this.stateService.pendingConfirmationToolId.set(null); // Clear pending state
+        } else {
+            // Normal message
+            await this.agentService.sendMessage(content);
+        }
     }
 
     handleSuggestionSelected(suggestion: string): void {
-        this.handleSendMessage(suggestion);
+        this.userInput.set(suggestion);
+        this.handleSendMessage();
     }
 
     handleAddToPr(product: ProductCard): void {
@@ -108,8 +137,18 @@ export class Chat {
     }
 
     ngOnInit() {
+        // Load existing conversation if available, or start fresh
+        // For now, we just rely on the service state.
+
         // Load demo data on init
         // this.stateService.loadDemoData();
+
+        // Check for existing thread
+        const currentThreadId = this.agentService.getThreadId();
+        if (currentThreadId) {
+            // Ideally we would load history here if we were persisting it properly across reloads
+            // For now, we just start fresh or keep in-memory state
+        }
 
         // Trigger Test
         // this.testUpdatePrTool();
@@ -214,7 +253,8 @@ export class Chat {
 
 
     // --- History Management ---
-    threads = signal<any[]>([]);
+    threads = computed(() => this.agentService.threadsResource.value()?.reverse() || []);
+    isHistoryLoading = computed(() => this.agentService.threadsResource.isLoading());
     showHistoryModal = signal(false);
 
     // Current Chat Title Logic
@@ -223,13 +263,6 @@ export class Chat {
         const thread = this.threads().find(t => t.thread_id === currentId);
         return thread?.title || 'New Chat';
     });
-
-    loadThreads() {
-        this.agentService.getThreads().subscribe((threads) => {
-            this.threads.set(threads.reverse());
-            // Scroll to bottom after loading threads if needed (though usually we scroll on message load)
-        });
-    }
 
     scrollToBottom() {
         if (this.scrollContainer) {
@@ -242,9 +275,8 @@ export class Chat {
 
     toggleHistory() {
         this.showHistoryModal.update(v => !v);
-        if (this.showHistoryModal()) {
-            this.loadThreads();
-        }
+        // Resource automatically fetches when accessed if not already loaded, or we can trigger refresh if needed
+        // But httpResource is eager by default if we use it in template/computed.
     }
 
     closeHistory() {
@@ -253,7 +285,9 @@ export class Chat {
 
     startNewChat() {
         this.agentService.resetConversation();
-        this.loadThreads();
+        // Threads resource will auto-update if we invalidate it, but for now we just rely on it being fresh enough
+        // or we could trigger a refetch if we had exposed a reload method.
+        // For simple usage, we just close modal.
         this.showHistoryModal.set(false);
     }
 
@@ -268,9 +302,7 @@ export class Chat {
         const { thread, newTitle } = event;
         this.agentService.updateThreadTitle(thread.thread_id, newTitle).subscribe({
             next: () => {
-                this.threads.update(threads =>
-                    threads.map(t => t.thread_id === thread.thread_id ? { ...t, title: newTitle } : t)
-                );
+                this.agentService.threadsResource.reload();
                 toast.success('Thread updated');
             },
             error: (err) => {
@@ -283,7 +315,7 @@ export class Chat {
     handleDeleteThread(threadId: string) {
         this.agentService.deleteThread(threadId).subscribe({
             next: () => {
-                this.threads.update(threads => threads.filter(t => t.thread_id !== threadId));
+                this.agentService.threadsResource.reload();
                 if (this.agentService.getThreadId() === threadId) {
                     this.startNewChat();
                 }

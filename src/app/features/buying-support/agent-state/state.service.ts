@@ -40,9 +40,9 @@ const initialState: AppState = {
   chatStream: [],
   artifacts: [],
   purchaseRequisition: {
-    prId: 'PR-2024-034',
-    requester: { name: 'John Doe', contact: 'john.doe@example.com' },
-    expectedDelivery: '2024-10-28',
+    prId: '',
+    requester: { name: 'Sarah Johnson', contact: 'sarah.johnson@company.com' },
+    expectedDelivery: new Date().toISOString(),
     justification: '',
     suppliers: [],
     items: [],
@@ -58,6 +58,8 @@ export class StateService {
   storeEvents: (BaseEvent)[] = [];
   private injector = inject(Injector);
 
+  pendingConfirmationToolId = signal<string | null>(null);
+
   log_events = computed(() => this.storeEvents);
   // Buffers to correctly associate events
   private toolCallArgBuffer: { [id: string]: string } = {};
@@ -70,7 +72,7 @@ export class StateService {
 
   }
 
-  public handleEvent(event: BaseEvent): void {
+  public handleEvent(event: BaseEvent, isRestoring: boolean = false): void {
     this.storeEvents.push(event);
 
     switch (event.type) {
@@ -78,22 +80,22 @@ export class StateService {
         this.state.update((s) => ({
           ...s,
           runStatus: 'running',
-          // error: null,
-          // thinkingSteps: [],
-          // suggestions: [],
-          // toolCalls: [],
-          // chatStream: [], // Clear streams on new run
+          error: null,
+          isResourceExhausted: false
         }));
         break;
       case EventType.RUN_FINISHED:
         this.state.update((s) => ({ ...s, runStatus: 'idle' }));
         break;
+
       case EventType.RUN_ERROR:
         const errorEvent = event as RunErrorEvent;
         const errorMessage = typeof errorEvent.message === 'string' ? errorEvent.message : JSON.stringify(errorEvent.message); // Use errorEvent.message
 
         // Check for 429 or Resource Exhausted
-        if (errorMessage.includes('429') || errorMessage.includes('Resource exhausted')) {
+        const isResourceExhausted = errorMessage.includes('429') || errorMessage.includes('Resource exhausted');
+
+        if (isResourceExhausted) {
           this.state.update(s => ({
             ...s,
             isResourceExhausted: true
@@ -108,20 +110,25 @@ export class StateService {
               : tc
           );
 
-          // 2. Create a visible system error message for the user
-          const systemErrorMessage: Message = {
-            id: `err - ${uuidv4()} `,
-            role: 'system',
-            content: `An error occurred: ${errorEvent.message} `,
-            name: 'System Error',
-          };
+          // 2. Create a visible system error message for the user (ONLY AT RUNTIME AND IF NOT RESOURCE EXHAUSTED)
+          // If it's a resource exhausted error, we prioritize the banner and don't clutter the chat.
+          let newChatStream = s.chatStream;
+          if (!isRestoring && !isResourceExhausted) {
+            const systemErrorMessage: Message = {
+              id: `err - ${uuidv4()} `,
+              role: 'system',
+              content: `An error occurred: ${errorEvent.message} `,
+              name: 'System Error',
+            };
+            newChatStream = [...s.chatStream, systemErrorMessage];
+          }
 
           return {
             ...s,
             runStatus: 'idle', // Stop all loading indicators
             error: errorEvent.message,
             toolCalls: updatedToolCalls,
-            chatStream: [...s.chatStream, systemErrorMessage], // Add error to the chat
+            chatStream: newChatStream,
           };
         });
         break;
@@ -302,6 +309,11 @@ export class StateService {
 
         const shouldDisplay = !this.skipToolDisplay(startEvent.toolCallName);
 
+        // Track pending confirmation
+        if (startEvent.toolCallName === 'ask_user_confirmation') {
+          this.pendingConfirmationToolId.set(startEvent.toolCallId);
+        }
+
         this.state.update((s) => ({
           ...s,
           toolCalls: [...s.toolCalls, newToolCall],
@@ -377,6 +389,11 @@ export class StateService {
 
       case EventType.TOOL_CALL_RESULT:
         const resultEvent = event as ToolCallResultEvent;
+
+        // Clear pending confirmation if it matches
+        if (this.pendingConfirmationToolId() === resultEvent.toolCallId) {
+          this.pendingConfirmationToolId.set(null);
+        }
 
         const currentState = this.state();
         const updatedToolCalls = currentState.toolCalls.map((tc) =>
@@ -603,12 +620,59 @@ export class StateService {
 
   public addUserMessage(content: string, id?: string): void {
     const userMessage: Message = { id: id || `msg_${Date.now()} `, role: 'user', content };
+
+    // Check if there is a pending confirmation tool that this message should resolve
+    const pendingId = this.pendingConfirmationToolId();
+    if (pendingId) {
+      this.state.update((s) => {
+        const updatedToolCalls = s.toolCalls.map((tc) =>
+          tc.toolCallId === pendingId
+            ? ({ ...tc, status: 'success', result: content, updatedAt: new Date() } as ToolCallState)
+            : tc
+        );
+
+      const updatedChatStream = s.chatStream.map((item) => {
+        if ('type' in item && item.type === 'tool-call' && item.toolCallId === pendingId) {
+          return { ...item, status: 'success', result: content, updatedAt: new Date() } as ToolCallState;
+        }
+        return item;
+      });
+
+      return { ...s, toolCalls: updatedToolCalls, chatStream: updatedChatStream };
+      });
+      this.pendingConfirmationToolId.set(null);
+    }
+
     this.state.update((s) => ({
       ...s,
       messages: [...s.messages, userMessage],
       chatStream: [...s.chatStream, userMessage],
       suggestions: [],
     }));
+  }
+
+  public resolveToolCall(toolCallId: string, result: string): void {
+    this.state.update((s) => {
+      const updatedToolCalls = s.toolCalls.map((tc) =>
+        tc.toolCallId === toolCallId
+          ? ({ ...tc, status: 'success', result: result, updatedAt: new Date() } as ToolCallState)
+          : tc
+      );
+
+      const updatedChatStream = s.chatStream.map((item) => {
+        if ('type' in item && item.type === 'tool-call' && item.toolCallId === toolCallId) {
+          return { ...item, status: 'success', result: result, updatedAt: new Date() } as ToolCallState;
+        }
+        return item;
+      });
+
+      return { ...s, toolCalls: updatedToolCalls, chatStream: updatedChatStream };
+    });
+    
+    // Also clear pending confirmation if it matches
+    if (this.pendingConfirmationToolId() === toolCallId) {
+      this.pendingConfirmationToolId.set(null);
+    }
   }
   public addProductToPr(product: ProductCard): void {
     this.state.update((s) => {
@@ -788,6 +852,32 @@ export class StateService {
 
     this.updateSuppliers(mockSuppliers);
   }
+
+  public updateToolCallStatus(toolCallId: string, status: 'success' | 'error', result: any): void {
+    const currentState = this.state();
+    const updatedChatStream = currentState.chatStream.map((item) => {
+      if (
+        'type' in item &&
+        item.type === 'tool-call' &&
+        item.toolCallId === toolCallId
+      ) {
+        return {
+          ...item,
+          status,
+          result,
+          updatedAt: new Date(),
+        } as ToolCallState;
+      }
+      return item;
+    });
+
+    this.state.update(s => ({
+      ...s,
+      chatStream: updatedChatStream
+    }));
+  }
+
+
   // Method to add a generic error message to the chat history for visibility
   public addErrorMessage(content: string): void {
     const errorMessage: Message = {
@@ -876,6 +966,11 @@ export class StateService {
     this.state.update((s) => {
       let updatedPr = { ...s.purchaseRequisition };
       let validationError = '';
+
+      // Update PR ID
+      if (args.purchase_request_id) {
+        updatedPr.prId = args.purchase_request_id;
+      }
 
       // Update justification
       if (args.justification) {
@@ -979,6 +1074,7 @@ export class StateService {
   private mapInternalAgentNameToDisplayName(internalName: string): string {
     const mapping: { [key: string]: string } = {
       buying_support_agent: 'Buying Support Agent',
+      custom_specialist: 'Custom Specialist Agent',
       need_analyzer: 'Procure Assist Agent',
       supplier_researcher: 'Supplier Recommendation Agent',
       pre_compliance_agent: 'Pre-Compliance Agent',

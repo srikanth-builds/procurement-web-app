@@ -7,8 +7,8 @@
         </app-chat-header>
 
         <!-- History Modal -->
-        <app-history [isOpen]="showHistoryModal()" [threads]="threads()" (close)="closeHistory()"
-            (selectThread)="loadThread($event)" (updateTitle)="handleUpdateTitle($event)"
+        <app-history [isOpen]="showHistoryModal()" [threads]="threads()" [isLoading]="isHistoryLoading()"
+            (close)="closeHistory()" (selectThread)="loadThread($event)" (updateTitle)="handleUpdateTitle($event)"
             (deleteThread)="handleDeleteThread($event)">
         </app-history>
 
@@ -46,12 +46,47 @@
 
                 <div class="relative flex items-center gap-2 rounded-2xl border bg-background shadow-lg ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 p-2 transition-all duration-200"
                     [class.ring-2]="isLoading()" [class.ring-ring]="isLoading()" [class.ring-offset-2]="isLoading()">
-                    <textarea [(ngModel)]="userInput"
-                        (keydown.enter)="$event.preventDefault(); handleSendMessage(userInput())"
+
+                    <textarea [(ngModel)]="userInput" (keydown.enter)="$event.preventDefault(); handleSendMessage()"
                         placeholder="Ask about procurement..." cdkTextareaAutosize cdkAutosizeMinRows="1"
                         cdkAutosizeMaxRows="5" [disabled]="isLoading()"
                         class="flex-1 resize-none bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-default max-h-40 overflow-y-auto leading-tight min-h-[40px]"></textarea>
-                    <button (click)="handleSendMessage(userInput())" [disabled]="!userInput() || isLoading()"
+
+                    <!-- Divider -->
+                    <div class="w-px h-6 bg-border mx-1"></div>
+
+                    <!-- Mode Toggle -->
+                    <hlm-tooltip position="below">
+                        <button hlmTooltipTrigger (click)="toggleMode()" variant="ghost"
+                            class="h-10 w-10 rounded-xl p-0 transition-all duration-200 flex items-center justify-center"
+                            [ngClass]="{
+                                'text-primary bg-primary/10 ring-1 ring-primary/20': currentMode() === 'agent',
+                                'text-muted-foreground hover:bg-muted': currentMode() === 'ask'
+                            }">
+
+                            <!-- Icon: Autopilot Toggle -->
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="cursor-pointer transition-transform duration-300"
+                                [class.rotate-180]="currentMode() === 'agent'">
+                                <!-- The Container Ring -->
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+
+                                <!-- The Action Bolt -->
+                                <path d="M10.5 16L14.5 11.5H11.5L13.5 8L9.5 12.5H12.5L10.5 16Z" fill="currentColor"
+                                    stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <span *brnTooltipContent class="flex items-center gap-2">
+                            @if (currentMode() === 'ask') {
+                            Ask confirmation and proceed
+                            } @else {
+                            Choose best path
+                            }
+                        </span>
+                    </hlm-tooltip>
+
+                    <button (click)="handleSendMessage()" [disabled]="!userInput() || isLoading()"
                         class="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-primary h-10 w-10 text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all">
                         @if (isLoading()) {
                         <lucide-icon name="loader-2" class="size-5 animate-spin"></lucide-icon>

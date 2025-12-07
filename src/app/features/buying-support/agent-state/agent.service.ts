@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, resource, effect, untracked } from '@angular/core';
+import { httpResource } from '@angular/common/http';
 import { HttpAgent } from '@ag-ui/client';
 import { Message, EventType } from '@ag-ui/core';
 import { StateService } from './state.service';
@@ -11,19 +12,30 @@ export interface ContextItem {
 }
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { productOptionsTool, suggestionTool, supplierListTool, updatePrTool } from '../agent-tools/agent-tools';
-
-
+import { productOptionsTool, suggestionTool, supplierListTool, updatePrTool, askUserConfirmationTool } from '../agent-tools/agent-tools';
 
 @Injectable({ providedIn: 'root' })
 export class AgentService {
   private agent!: HttpAgent;
+  private mode: 'ask' | 'agent' = 'ask';
   private http = inject(HttpClient);
   private stateService = inject(StateService);
   private currentThreadId: string = uuidv4(); // This ID will now persist
 
   isRunning = signal(false);
   error = signal<string | null>(null);
+
+  // Resource for threads
+  threadsResource = httpResource<any[]>(() => `${environment.agentUrl}threads`);
+
+  // Signal for current thread ID to drive history resource
+  private historyThreadId = signal<string | null>(null);
+
+  // Resource for history
+  historyResource = httpResource<any[]>(() => {
+    const threadId = this.historyThreadId();
+    return threadId ? `${environment.agentUrl}history/${threadId}` : undefined;
+  });
 
   private isToolExecutionPending = false;
 
@@ -35,6 +47,16 @@ export class AgentService {
 
   constructor() {
     this.initAgent();
+
+    // Reactively process history when loaded
+    effect(() => {
+      const history = this.historyResource.value();
+      untracked(() => {
+        if (history) {
+          this.processHistory(history);
+        }
+      });
+    });
   }
 
   private initAgent(): void {
@@ -43,6 +65,7 @@ export class AgentService {
     this.agent = new HttpAgent({
       url: environment.agentUrl,
       threadId: this.currentThreadId,
+      initialState: { mode: 'ask' }
     });
 
     this.agent.subscribe({
@@ -88,6 +111,8 @@ export class AgentService {
     });
   }
 
+
+
   private buildContext(additionalContext: any[] = []): ContextItem[] {
     const contextItem: ContextItem = {
       description: 'User ID of the requester',
@@ -97,6 +122,8 @@ export class AgentService {
       description: 'Current Purchase Requisition State',
       value: JSON.stringify(this.stateService.state().purchaseRequisition),
     };
+
+
 
     // Filter artifacts to reduce token usage
     const artifacts = this.stateService.state().artifacts || [];
@@ -131,10 +158,12 @@ export class AgentService {
 
     try {
       await this.agent.runAgent({
-        tools: [suggestionTool, productOptionsTool, supplierListTool, updatePrTool],
+
+        tools: [suggestionTool, productOptionsTool, supplierListTool, updatePrTool, askUserConfirmationTool],
         context: combinedContext,
         forwardedProps: forwardedProps,
       });
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown agent error occurred.';
       this.error.set(errorMessage);
@@ -197,7 +226,7 @@ export class AgentService {
 
     this.agent.messages.push(toolMessage);
 
-    await this.executeRun(context);
+    await this.executeRun(context, {});
   }
 
   resetConversation(): void {
@@ -212,14 +241,6 @@ export class AgentService {
     return this.currentThreadId;
   }
 
-  getThreads(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.agentUrl}threads`);
-  }
-
-  getHistory(threadId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.agentUrl}history/${threadId}`);
-  }
-
   updateThreadTitle(threadId: string, title: string): Observable<any> {
     return this.http.put<any>(`${environment.agentUrl}threads/${threadId}`, { title });
   }
@@ -228,53 +249,68 @@ export class AgentService {
     return this.http.delete<any>(`${environment.agentUrl}threads/${threadId}`);
   }
 
+  setMode(mode: 'ask' | 'agent'): void {
+    this.mode = mode;
+    this.agent.state = { mode: this.mode };
+  }
+
   loadConversation(threadId: string): void {
-    this.getHistory(threadId).subscribe({
-      next: (events) => {
-        this.stateService.resetState();
-        this.currentThreadId = threadId;
-        this.initAgent();
-        this.lastAction = null; // Reset initially
+    this.historyThreadId.set(threadId);
+  }
 
-        events.forEach((item: any) => {
-          // 1. Handle User Input (from 'run_agent_input' events)
-          if (item.type === 'input' && item.payload?.messages) {
-            const messages = item.payload.messages;
-            if (Array.isArray(messages) && messages.length > 0) {
-              const lastMessage = messages[messages.length - 1];
-              if (lastMessage.role === 'user') {
-                this.stateService.addUserMessage(lastMessage.content, lastMessage.id);
-                // Set as potential retry point
-                this.lastAction = {
-                  type: 'message',
-                  args: [[], {}] // Assume no extra context/props for history items
-                };
+  private processHistory(events: any[]): void {
+    this.stateService.resetState();
+    // Use the ID from the signal, or fallback to current if not set (should be set)
+    this.currentThreadId = this.historyThreadId() || this.currentThreadId;
+    this.initAgent();
+    this.lastAction = null; // Reset initially
+
+    events.forEach((item: any) => {
+      // 1. Handle User Input (from 'run_agent_input' events)
+      if (item.type === 'input' && item.payload?.messages) {
+        const messages = item.payload.messages;
+        if (Array.isArray(messages) && messages.length > 0) {
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage.role === 'user') {
+            this.stateService.addUserMessage(lastMessage.content, lastMessage.id);
+            // Set as potential retry point
+            this.lastAction = {
+              type: 'message',
+              args: [[], {}] // Assume no extra context/props for history items
+            };
+          } else if (lastMessage.role === 'tool') {
+            // Handle tool results that come from history inputs (could be multiple if parallel)
+            let i = messages.length - 1;
+            while (i >= 0) {
+              const msg = messages[i];
+              if (msg.role === 'tool' && msg.tool_call_id) {
+                this.stateService.resolveToolCall(msg.tool_call_id, msg.content);
+              } else {
+                // Stop if we hit non-tool message
+                break;
               }
+              i--;
             }
           }
-          // 2. Handle Agent Events (from 'event' type)
-          else if (item.type === 'event' && item.payload) {
-            const normalizedEvent = this.normalizeEvent(item.payload);
-            this.stateService.handleEvent(normalizedEvent);
+        }
+      }
+      // 2. Handle Agent Events (from 'event' type)
+      else if (item.type === 'event' && item.payload) {
+        const normalizedEvent = this.normalizeEvent(item.payload);
+        this.stateService.handleEvent(normalizedEvent, true);
 
-            if (normalizedEvent.type === EventType.TOOL_CALL_END) {
-              const toolCallId = normalizedEvent.toolCallId;
-              this.stateService.executeToolSideEffects(toolCallId);
-              // Note: We don't easily know if this tool call *triggered* a run that failed.
-              // But if we see a tool call end, it implies a result might follow.
-              // For now, relying on 'user' message as the main retry point is safer for history loading.
-            }
-          }
-        });
-
-        // Ensure we don't start in an error state just because the history contained one
-        this.stateService.clearResourceExhaustedError();
-      },
-      error: (err) => {
-        console.error('Failed to load history', err);
-        this.stateService.addErrorMessage('Failed to load conversation history.');
+        if (normalizedEvent.type === EventType.TOOL_CALL_END) {
+          const toolCallId = normalizedEvent.toolCallId;
+          this.stateService.executeToolSideEffects(toolCallId);
+          // Note: We don't easily know if this tool call *triggered* a run that failed.
+          // But if we see a tool call end, it implies a result might follow.
+          // For now, relying on 'user' message as the main retry point is safer for history loading.
+        }
       }
     });
+
+    // Ensure we don't start in an error state just because the history contained one
+    this.stateService.clearResourceExhaustedError();
   }
 
   private normalizeEvent(payload: any): any {

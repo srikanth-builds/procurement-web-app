@@ -41,76 +41,92 @@ export const productOptionsTool = {
 };
 
 export const suggestionTool = {
-    name: 'show_suggestions',
-    description: 'Use this tool to show a list of suggestions to the user to guide their next actions.',
-    parameters: {
-        type: 'object',
-        properties: {
-            suggestions: {
-                type: 'array',
-                items: { type: 'string' },
-            },
-        },
-        required: ['suggestions'],
+  name: 'show_suggestions',
+  description: 'Use this tool to show a list of suggestions to the user to guide their next actions.',
+  parameters: {
+    type: 'object',
+    properties: {
+      suggestions: {
+        type: 'array',
+        items: { type: 'string' },
+      },
     },
+    required: ['suggestions'],
+  },
 };
 
 export const supplierListTool = {
-    name: 'supplier_list',
-    description: 'Use this tool to show a list of recommended suppliers to the user',
-    parameters: {
-        type: 'object',
-        properties: {
+  name: 'supplier_list',
+  description: 'Use this tool to show a list of recommended suppliers to the user',
+  parameters: {
+    type: 'object',
+    properties: {
 
-            suppliers: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'string' },
-                        name: { type: 'string' },
-                        contact: { type: 'string' },
-                        rating: { type: 'number' },
-                        location: { type: 'string' },
-                        status: {
-                            type: 'string',
-                            enum: ['Preferred', 'Approved', 'Probation', 'New'],
-                        },
-                        website: { type: 'string' },
-                    },
-                    required: ['id', 'name', 'contact', 'rating', 'location', 'status'],
-                },
+      suppliers: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            contact: { type: 'string' },
+            rating: { type: 'number' },
+            location: { type: 'string' },
+            status: {
+              type: 'string',
+              enum: ['Preferred', 'Approved', 'Probation', 'New'],
             },
+            website: { type: 'string' },
+          },
+          required: ['id', 'name', 'contact', 'rating', 'location', 'status'],
         },
-        required: ['suppliers'],
+      },
     },
+    required: ['suppliers'],
+  },
 };
 
 export const updatePrTool = {
-    name: 'update_pr_state',
-    description: 'This tool is to update the UI state of the Purchase Requisition (PR) form. Use this to add items, suppliers, or update justification/delivery date based on user request.',
-    parameters: {
-        type: 'object',
-        properties: {
-            justification: { type: 'string', description: 'Justification for the purchase' },
-            items: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        name: { type: 'string' },
-                        quantity: { type: 'number' }
-                    },
-                    required: ['name', 'quantity']
-                },
-                description: 'List of products to add to the PR. IMPORTANT: Only call this AFTER you have shown products to the user using "show_products_to_user".'
-            },
-            suppliers: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'List of supplier names to add to the PR. IMPORTANT: Only call this AFTER you have shown the supplier list using "supplier_list".'
-            },
-            expectedDelivery: { type: 'string', description: 'Expected delivery date (YYYY-MM-DD)' }
+  name: 'update_pr_state',
+  description: 'This tool is to update the UI state of the Purchase Requisition (PR) form. Use this to add items, suppliers, or update justification/delivery date based on user request.',
+  parameters: {
+    type: 'object',
+    properties: {
+      purchase_request_id: { type: 'string', description: 'The ID of the purchase requisition (e.g. PR-2024-001)' },
+      justification: { type: 'string', description: 'Justification for the purchase' },
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            quantity: { type: 'number' }
+          },
+          required: ['name', 'quantity']
         },
+        description: 'List of products to add to the PR. IMPORTANT: Only call this AFTER you have shown products to the user using "show_products_to_user".'
+      },
+      suppliers: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'List of supplier names to add to the PR. IMPORTANT: Only call this AFTER you have shown the supplier list using "supplier_list".'
+      },
+      expectedDelivery: { type: 'string', description: 'Expected delivery date (YYYY-MM-DD)' }
     },
+  },
+};
+
+export const askUserConfirmationTool = {
+  name: 'ask_user_confirmation',
+  description: 'Use this tool to ask the user for confirmation before performing a sensitive action or when you need explicit approval. The user can respond with Yes, No, or provide refinement.',
+  parameters: {
+    type: 'object',
+    properties: {
+      descriptive_action: {
+        type: 'string',
+        description: 'A clear, concise description of the action you are about to perform, which the user needs to confirm. E.g., "Submit the purchase requisition for $500?"'
+      }
+    },
+    required: ['descriptive_action']
+  }
 };

@@ -58,13 +58,15 @@ import {
 
       <hlm-sidebar-footer class="p-4 border-t border-sidebar-border shrink-0">
           <div class="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-             <div class="relative h-9 w-9 rounded-full bg-emerald-600 flex items-center justify-center text-white font-medium ring-2 ring-sidebar-border">
-                <img src="https://github.com/shadcn.png" alt="User" class="h-full w-full rounded-full object-cover" />
-             </div>
-             <div class="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span class="text-sm font-medium text-white">Jane Smith</span>
-                <span class="text-xs text-sidebar-foreground/70">Creative Director</span>
-             </div>
+             <a routerLink="/profile" class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0">
+                 <div class="relative h-9 w-9 rounded-full bg-emerald-600 flex items-center justify-center text-white font-medium ring-2 ring-sidebar-border">
+                    <img src="https://github.com/shadcn.png" alt="User" class="h-full w-full rounded-full object-cover" />
+                 </div>
+                 <div class="flex flex-col group-data-[collapsible=icon]:hidden min-w-0">
+                    <span class="text-sm font-medium text-sidebar-foreground truncate">Sarah Johnson</span>
+                    <span class="text-xs text-sidebar-foreground/70 truncate">Requestor</span>
+                 </div>
+             </a>
              <button class="ml-auto group-data-[collapsible=icon]:hidden text-sidebar-foreground/70 hover:text-white">
                 <lucide-icon name="settings" class="size-4"></lucide-icon>
              </button>

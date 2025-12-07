@@ -32,6 +32,10 @@ export const routes: Routes = [
                 path: 'purchase-order',
                 loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
             },
+            {
+                path: 'profile',
+                loadComponent: () => import('./features/user-profile/user-profile.component').then(m => m.UserProfileComponent)
+            },
         ]
     }
 ];
