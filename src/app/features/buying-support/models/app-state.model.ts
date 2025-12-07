@@ -48,7 +48,23 @@ export interface SupplierListPanel {
   suppliers: SupplierItem[];
 }
 
-export type ChatStreamItem = Message | ToolCallState | ThoughtsPanel | ProductOptionsPanel | SupplierListPanel;
+export interface SearchResult {
+  query: string;
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+export interface SearchProgressPanel {
+  type: 'search-progress-panel';
+  id: string; // search_id
+  queries: string[];
+  results: SearchResult[];
+  status: 'searching' | 'complete';
+  isExpanded?: boolean;
+}
+
+export type ChatStreamItem = Message | ToolCallState | ThoughtsPanel | ProductOptionsPanel | SupplierListPanel | SearchProgressPanel;
 
 export interface UserProfile {
   name: string;

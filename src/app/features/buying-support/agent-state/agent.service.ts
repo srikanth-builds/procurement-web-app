@@ -20,7 +20,7 @@ export class AgentService {
   private mode: 'ask' | 'agent' = 'ask';
   private http = inject(HttpClient);
   private stateService = inject(StateService);
-  private currentThreadId: string = uuidv4(); // This ID will now persist
+  currentThreadId = signal<string>(uuidv4()); // This ID will now persist
 
   isRunning = signal(false);
   error = signal<string | null>(null);
@@ -50,6 +50,9 @@ export class AgentService {
 
     // Reactively process history when loaded
     effect(() => {
+      if (this.historyResource.error()) {
+        return;
+      }
       const history = this.historyResource.value();
       untracked(() => {
         if (history) {
@@ -64,7 +67,7 @@ export class AgentService {
     // by this service. It will not change unless resetConversation is called.
     this.agent = new HttpAgent({
       url: environment.agentUrl,
-      threadId: this.currentThreadId,
+      threadId: this.currentThreadId(),
       initialState: { mode: 'ask' }
     });
 
@@ -231,14 +234,14 @@ export class AgentService {
 
   resetConversation(): void {
     this.stateService.resetState();
-    this.currentThreadId = uuidv4(); // A new ID is generated ONLY on explicit reset.
+    this.currentThreadId.set(uuidv4()); // A new ID is generated ONLY on explicit reset.
     this.initAgent(); // Re-initialize agent with the new threadId.
     this.error.set(null);
     this.lastAction = null;
   }
 
   getThreadId(): string {
-    return this.currentThreadId;
+    return this.currentThreadId();
   }
 
   updateThreadTitle(threadId: string, title: string): Observable<any> {
@@ -261,7 +264,7 @@ export class AgentService {
   private processHistory(events: any[]): void {
     this.stateService.resetState();
     // Use the ID from the signal, or fallback to current if not set (should be set)
-    this.currentThreadId = this.historyThreadId() || this.currentThreadId;
+    this.currentThreadId.set(this.historyThreadId() || this.currentThreadId());
     this.initAgent();
     this.lastAction = null; // Reset initially
 

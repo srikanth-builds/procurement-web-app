@@ -99,7 +99,9 @@ export class Chat {
             // Manually update the tool call status so the UI reflects the response
             this.stateService.updateToolCallStatus(pendingToolId, 'success', content);
 
-            await this.agentService.sendToolResult(pendingToolId, content);
+            // Wrap response in an object to satisfy backend validation
+            const result = { response: content };
+            await this.agentService.sendToolResult(pendingToolId, result);
             this.stateService.pendingConfirmationToolId.set(null); // Clear pending state
         } else {
             // Normal message
@@ -253,7 +255,12 @@ export class Chat {
 
 
     // --- History Management ---
-    threads = computed(() => this.agentService.threadsResource.value()?.reverse() || []);
+    threads = computed(() => {
+        if (this.agentService.threadsResource.error()) {
+            return [];
+        }
+        return this.agentService.threadsResource.value()?.reverse() || [];
+    });
     isHistoryLoading = computed(() => this.agentService.threadsResource.isLoading());
     showHistoryModal = signal(false);
 
@@ -275,8 +282,9 @@ export class Chat {
 
     toggleHistory() {
         this.showHistoryModal.update(v => !v);
-        // Resource automatically fetches when accessed if not already loaded, or we can trigger refresh if needed
-        // But httpResource is eager by default if we use it in template/computed.
+        if (this.showHistoryModal()) {
+            this.agentService.threadsResource.reload();
+        }
     }
 
     closeHistory() {

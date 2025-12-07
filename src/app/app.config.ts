@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { LucideAngularModule, Package2, User, ShoppingCart, Users, BarChart, Handshake, FileText, PanelLeft, Bell, Plus, History, PenLine, Check, X, Search, Bot, Trash2, Settings, MessageSquare, ExternalLink, SendHorizontal, Sun, Moon, MoonIcon, SunIcon, ArrowLeft, ArrowRight, ArrowLeftRight, BookOpen, Loader2, MapPin, Star, CheckCircle, Building2, Minus, Sparkle, Sparkles, Download, Image, Clock, MessageCircleQuestionMark, BotIcon, Edit2, PackageCheck, AlertCircle, Brain, Copy } from 'lucide-angular';
+import { LucideAngularModule, Package2, User, ShoppingCart, Users, BarChart, Handshake, FileText, PanelLeft, Bell, Plus, History, PenLine, Check, X, Search, Bot, Trash2, Settings, MessageSquare, ExternalLink, SendHorizontal, Sun, Moon, MoonIcon, SunIcon, ArrowLeft, ArrowRight, ArrowLeftRight, BookOpen, Loader2, MapPin, Star, CheckCircle, Building2, Minus, Sparkle, Sparkles, Download, Image, Clock, MessageCircleQuestionMark, BotIcon, Edit2, PackageCheck, AlertCircle, Brain, Copy, Link } from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { provideHttpClient } from '@angular/common/http';
@@ -28,6 +28,7 @@ const LucideIcons = {
   AlertCircle,
   Brain,
   Copy,
+  Link
 
 }
 

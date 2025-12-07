@@ -53,10 +53,63 @@
       @for (item of group.items; track $index) {
         <div class="flex justify-end">
           <div class="flex flex-col items-end max-w-[85%] group">
-            <div
-              class="bg-primary text-primary-foreground px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-sm"
-            >
-              <div class="whitespace-pre-wrap text-sm leading-relaxed">{{ item.content }}</div>
+            @let urls = extractUrls(item.content);
+
+            <div class="flex flex-col gap-2 items-end w-full">
+              <!-- Text Message Bubble (if not just URLs) -->
+              @if (urls.length === 0 || !isOnlyUrls(item.content)) {
+                <div
+                  class="bg-primary text-primary-foreground px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-sm break-words overflow-hidden max-w-full"
+                >
+                  <div class="whitespace-pre-wrap text-sm leading-relaxed">{{ item.content }}</div>
+                </div>
+              }
+
+              <!-- Link Cards -->
+              @if (urls.length > 0) {
+                <div class="flex flex-col gap-2 items-end w-full">
+                  @for (url of urls; track url) {
+                    @let linkData = getLinkMetadata(url);
+                    <div
+                      class="flex flex-col gap-2 p-3 rounded-2xl rounded-tr-sm bg-card border border-border/50 shadow-sm max-w-sm w-full group/link"
+                    >
+                      <!-- Badge -->
+                      <div
+                        class="flex items-center gap-1.5 self-start px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium"
+                      >
+                        <lucide-icon name="link" class="size-3"></lucide-icon>
+                        <span>Pasted Link</span>
+                      </div>
+
+                      <!-- Link Content -->
+                      <a
+                        [href]="url"
+                        target="_blank"
+                        class="flex items-start gap-3 group-hover/link:opacity-80 transition-opacity"
+                      >
+                        <div
+                          class="flex items-center justify-center size-10 rounded-lg bg-muted shrink-0 overflow-hidden"
+                        >
+                          <img
+                            [src]="linkData.favicon"
+                            class="size-6 object-contain"
+                            alt=""
+                            onerror="this.style.display = 'none'"
+                          />
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                          <span class="text-sm font-medium text-foreground truncate block w-full">{{
+                            linkData.title
+                          }}</span>
+                          <span class="text-xs text-muted-foreground truncate block w-full">{{
+                            linkData.domain
+                          }}</span>
+                        </div>
+                      </a>
+                    </div>
+                  }
+                </div>
+              }
             </div>
 
             <button
@@ -130,6 +183,11 @@
                 <div class="prose-base">
                   <markdown [data]="item.content"></markdown>
                 </div>
+              }
+
+              <!-- Search Progress Panel -->
+              @if (isSearchProgressPanel(item)) {
+                <app-search-progress [panel]="item"></app-search-progress>
               }
             }
           </div>

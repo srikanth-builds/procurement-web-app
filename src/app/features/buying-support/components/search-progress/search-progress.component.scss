@@ -1,0 +1,27 @@
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 15px; /* Slightly wider for visibility */
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.5); /* Darker/More visible */
+    border-radius: 20px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.7);
+  }
+}
+
+.scroll-mask {
+  /* Gradient mask to fade out top and bottom */
+  /* Note: This might mask the scrollbar in some browsers. 
+     If visibility is critical, we might need to remove this or apply it to a wrapper. 
+     For now, keeping it as requested but ensuring scrollbar color is strong. */
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12px, black calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12px, black calc(100% - 12px), transparent 100%);
+}

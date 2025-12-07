@@ -2,7 +2,7 @@ import { afterNextRender, ChangeDetectionStrategy, Component, computed, effect, 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Message, ActivityMessage } from '@ag-ui/core';
-import { AppState, ChatStreamItem, ProductCard, SupplierItem, ThinkingStep, ThoughtsPanel, ToolCallState, ProductOptionsPanel, SupplierListPanel } from '../../models/app-state.model';
+import { AppState, ChatStreamItem, ProductCard, SupplierItem, ThinkingStep, ThoughtsPanel, ToolCallState, ProductOptionsPanel, SupplierListPanel, SearchProgressPanel } from '../../models/app-state.model';
 
 import { MarkdownComponent } from 'ngx-markdown';
 
@@ -13,11 +13,12 @@ import { ProductCarouselComponent } from '../product-carousel/product-carousel.c
 
 import { SupplierCarouselComponent } from '../supplier-carousel/supplier-carousel.component';
 import { ConfirmationToolComponent } from '../confirmation-tool/confirmation-tool.component';
-import { LucideAngularModule, Bot, ShoppingCart, FileText, BookOpen, Check, Loader2, AlertCircle } from 'lucide-angular';
+import { SearchProgressComponent } from '../search-progress/search-progress.component';
+import { LucideAngularModule, Bot, ShoppingCart, FileText, BookOpen, Check, Loader2, AlertCircle, Link } from 'lucide-angular';
 
 export interface AgentGroup {
   type: 'agent-group';
-  items: (Message | ToolCallState | ThoughtsPanel)[];
+  items: (Message | ToolCallState | ThoughtsPanel | SearchProgressPanel)[];
   agentName?: string;
 }
 
@@ -50,6 +51,7 @@ export type StreamGroup = AgentGroup | UserGroup | StandaloneGroup | ThinkingGro
     ProductCarouselComponent,
     SupplierCarouselComponent,
     ConfirmationToolComponent,
+    SearchProgressComponent,
     LucideAngularModule
   ],
   templateUrl: './conversation-stream.component.html',
@@ -112,11 +114,12 @@ export class ConversationStreamComponent {
         }
       }
 
-      // 3. Agent Messages / Tool Calls / Hidden Thoughts -> Add to Agent Group
+      // 3. Agent Messages / Tool Calls / Hidden Thoughts / Search Progress -> Add to Agent Group
       if (
         (this.isMessage(item) && item.role === 'assistant') ||
         this.isToolCall(item) ||
-        (this.isThoughtsPanel(item) && !this.shouldShowThinking(item))
+        (this.isThoughtsPanel(item) && !this.shouldShowThinking(item)) ||
+        this.isSearchProgressPanel(item)
       ) {
         let itemAgentName: string | undefined;
         if (this.isMessage(item)) {
@@ -125,6 +128,14 @@ export class ConversationStreamComponent {
           itemAgentName = item.agentName;
         } else if (this.isThoughtsPanel(item)) {
              itemAgentName = item.steps[0]?.author;
+        } else if (this.isSearchProgressPanel(item)) {
+          // Search panel belongs to the agent performing the search (usually tavily_search_agent)
+          // We can try to infer or just default to current group if compatible
+          // For now, let's assume it belongs to the current agent context or 'tavily_search_agent'
+          // But we don't have agentName on the panel itself easily.
+          // Let's assume it inherits the current agent group or starts a new one if none.
+          // If we want to be precise, we might need to add agentName to SearchProgressPanel.
+          // For now, let's treat it as 'Assistant' or keep current group.
         }
 
         // Check if we need to start a new group due to name change
@@ -197,6 +208,10 @@ export class ConversationStreamComponent {
 
   isSupplierListPanel(item: ChatStreamItem): item is SupplierListPanel {
     return 'type' in item && item.type === 'supplier-list-panel';
+  }
+
+  isSearchProgressPanel(item: ChatStreamItem): item is SearchProgressPanel {
+    return 'type' in item && item.type === 'search-progress-panel';
   }
 
   handleSendMessage(message: string = this.userMessage()): void {
@@ -327,6 +342,11 @@ export class ConversationStreamComponent {
         }
       }
 
+      // 3. Search Progress Panel is visible
+      if (this.isSearchProgressPanel(item)) {
+        return true;
+      }
+
       // Thoughts are handled in ThinkingGroup, so they are not "visible" in AgentGroup
       return false;
     });
@@ -369,5 +389,52 @@ export class ConversationStreamComponent {
       .filter(item => this.isMessage(item) && item.role === 'assistant')
       .map(item => (item as Message).content)
       .join('\n\n');
+  }
+
+  extractUrls(content: any): string[] {
+    const text = this.getMessageText(content);
+    if (!text) return [];
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+  }
+
+  isOnlyUrls(content: any): boolean {
+    const text = this.getMessageText(content);
+    if (!text) return false;
+    const urls = this.extractUrls(content);
+    if (urls.length === 0) return false;
+    
+    // Remove all URLs and whitespace from text
+    let remainingText = text;
+    urls.forEach(url => {
+      remainingText = remainingText.replace(url, '');
+    });
+    return remainingText.trim().length === 0;
+  }
+
+  getLinkMetadata(content: any): { domain: string; title: string; favicon: string } {
+    const urlStr = this.getMessageText(content);
+    try {
+      const url = new URL(urlStr);
+      const domain = url.hostname.replace('www.', '');
+      
+      // Try to derive a title from the path
+      let title = url.pathname.split('/').filter(p => p).pop() || domain;
+      title = title.replace(/-/g, ' ').replace(/_/g, ' ');
+      // Capitalize first letter
+      title = title.charAt(0).toUpperCase() + title.slice(1);
+      
+      if (title === domain) {
+          title = "Visit Website";
+      }
+
+      return {
+        domain,
+        title,
+        favicon: `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`
+      };
+    } catch {
+      return { domain: '', title: 'Link', favicon: '' };
+    }
   }
 }

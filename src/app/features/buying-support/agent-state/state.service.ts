@@ -10,6 +10,7 @@ import {
   ProductOptionsPanel,
   SupplierListPanel,
   PurchaseRequisition,
+  SearchProgressPanel,
 } from '../models/app-state.model';
 import {
   BaseEvent,
@@ -562,6 +563,60 @@ export class StateService {
               },
             ],
           }));
+        } else if (customEvent?.name === 'tavily_search_progress') {
+          const { search_id, step, data } = customEvent.value;
+
+          this.state.update((s) => {
+            let newStream = [...s.chatStream];
+            const existingIndex = newStream.findIndex(
+              (item) =>
+                'type' in item &&
+                item.type === 'search-progress-panel' &&
+                item.id === search_id
+            );
+
+            if (existingIndex !== -1) {
+              // Update existing panel
+              const panel = { ...(newStream[existingIndex] as SearchProgressPanel) };
+
+              if (step === 'search_start') {
+                // Add unique queries
+                const newQueries = data.queries || [];
+                const uniqueQueries = Array.from(
+                  new Set([...panel.queries, ...newQueries])
+                );
+                panel.queries = uniqueQueries;
+                panel.status = 'searching';
+              } else if (step === 'result_found') {
+                // Add result
+                panel.results = [...panel.results, data];
+              } else if (step === 'processing_complete') {
+                panel.status = 'complete';
+              }
+
+              newStream[existingIndex] = panel;
+            } else {
+              // Create new panel
+              const newPanel: SearchProgressPanel = {
+                type: 'search-progress-panel',
+                id: search_id,
+                queries: [],
+                results: [],
+                status: 'searching',
+                isExpanded: true,
+              };
+
+              if (step === 'search_start') {
+                newPanel.queries = data.queries || [];
+              } else if (step === 'result_found') {
+                newPanel.results = [data];
+              }
+
+              newStream.push(newPanel);
+            }
+
+            return { ...s, chatStream: newStream };
+          });
         }
         break;
 
@@ -1067,6 +1122,18 @@ export class StateService {
     return undefined;
   }
 
+  public toggleSearchPanel(id: string): void {
+    this.state.update((s) => {
+      const updatedChatStream = s.chatStream.map((item) => {
+        if ('type' in item && item.type === 'search-progress-panel' && item.id === id) {
+          return { ...item, isExpanded: !item.isExpanded };
+        }
+        return item;
+      });
+      return { ...s, chatStream: updatedChatStream };
+    });
+  }
+
   public resetState(): void {
     this.state.set(initialState);
   }
@@ -1079,8 +1146,8 @@ export class StateService {
       supplier_researcher: 'Supplier Recommendation Agent',
       pre_compliance_agent: 'Pre-Compliance Agent',
       post_compliance_agent: 'Post-Compliance Agent',
-      pr_drafter: 'Purchase Requisition Drafting Agent',
-      pr_formatter: 'PR Formatting Agent',
+      pr_drafter_agent: 'Purchase Requisition Drafting Agent',
+      pr_formatter_agent: 'PR Formatting Agent',
     };
     return mapping[internalName] || internalName;
   }

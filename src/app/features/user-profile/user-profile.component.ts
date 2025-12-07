@@ -17,7 +17,12 @@ export class UserProfileComponent {
 
     activeSection = signal<ProfileSection>('profile');
 
-    userProfile = computed(() => this.userProfileService.userProfileResource.value()?.user_profile);
+    userProfile = computed(() => {
+        if (this.userProfileService.userProfileResource.error()) {
+            return undefined;
+        }
+        return this.userProfileService.userProfileResource.value()?.user_profile;
+    });
     isLoading = computed(() => this.userProfileService.userProfileResource.isLoading());
     error = computed(() => this.userProfileService.userProfileResource.error());
 
