@@ -216,18 +216,22 @@
     @if (group.type === 'thinking-group') {
       @if (shouldShowThinking(group.item)) {
         <div
-          class="flex items-center gap-2.5 w-full md:w-fit py-1.5 px-3 rounded-lg bg-muted/40 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)] border-t border-l border-black/5 border-b border-r border-white/50 text-xs text-muted-foreground font-medium inset-shadow-sm select-none"
+          class="flex items-center gap-3 px-4 py-2.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/10 shadow-[0_0_15px_rgba(var(--primary-rgb),0.05)] w-fit animate-in fade-in slide-in-from-bottom-2 select-none"
         >
-          <!-- The Status Dot -->
-          <div class="relative flex items-center justify-center size-2 shrink-0">
-            <span
-              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 duration-1000"
-            ></span>
-            <span class="relative inline-flex rounded-full size-2 bg-primary shadow-sm"></span>
+          <!-- The Status Icon -->
+          <div class="relative flex items-center justify-center">
+            <div
+              class="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-75 duration-1000"
+            ></div>
+            <div class="relative bg-primary/10 rounded-full p-1.5">
+              <lucide-icon name="sparkles" class="size-3.5 text-primary animate-spin"></lucide-icon>
+            </div>
           </div>
 
           <!-- The Text -->
-          <span class="truncate tracking-wide pt-0.5">
+          <span
+            class="text-xs font-medium text-foreground/80 tracking-wide bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
+          >
             @if (group.item.steps.length > 0) {
               {{ group.item.steps[group.item.steps.length - 1].title }}
             } @else {
@@ -270,14 +274,23 @@
     <!-- Suggestions Removed (Moved to Chat Input) -->
   }
   <!-- Loading Indicator -->
-  @if (isLoading()) {
-    <div class="flex gap-2 items-center text-muted-foreground text-sm p-4 animate-pulse">
-      <div class="flex gap-1">
-        <span class="size-2 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-        <span class="size-2 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-        <span class="size-2 bg-current rounded-full animate-bounce"></span>
+  @if (showGenericLoading()) {
+    <div
+      class="flex items-center gap-3 px-4 py-2.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/10 shadow-[0_0_15px_rgba(var(--primary-rgb),0.05)] w-fit animate-in fade-in slide-in-from-bottom-2 select-none mb-4"
+    >
+      <div class="relative flex items-center justify-center">
+        <div
+          class="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-75 duration-1000"
+        ></div>
+        <div class="relative bg-primary/10 rounded-full p-1.5">
+          <lucide-icon name="sparkles" class="size-3.5 text-primary animate-spin"></lucide-icon>
+        </div>
       </div>
-      <span>Thinking...</span>
+      <span
+        class="text-xs font-medium text-foreground/80 tracking-wide bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
+      >
+        Thinking...
+      </span>
     </div>
   }
 </div>

@@ -23,6 +23,7 @@ export class AgentService {
   currentThreadId = signal<string>(uuidv4()); // This ID will now persist
 
   isRunning = signal(false);
+  runStartedAt = signal<Date | null>(null); // Track when the run started for elapsed time display
   error = signal<string | null>(null);
 
   // Resource for threads
@@ -101,6 +102,7 @@ export class AgentService {
           this.isToolExecutionPending = false;
         } else {
           this.isRunning.set(false);
+          this.runStartedAt.set(null); // Clear the start time
         }
       },
       onRunFailed: ({ error }) => {
@@ -108,6 +110,7 @@ export class AgentService {
         const friendlyError = `An error occurred: ${error.message}. Please try again or rephrase your request.`;
         this.error.set(friendlyError);
         this.isRunning.set(false);
+        this.runStartedAt.set(null); // Clear the start time
         this.isToolExecutionPending = false; // Reset on error
         this.stateService.addErrorMessage(friendlyError);
       },
@@ -155,6 +158,7 @@ export class AgentService {
 
   private async executeRun(additionalContext: any[] = [], forwardedProps: Record<string, any> = {}): Promise<void> {
     this.isRunning.set(true);
+    this.runStartedAt.set(new Date()); // Track when the run started
     this.error.set(null);
 
     const combinedContext = this.buildContext(additionalContext);
@@ -171,6 +175,7 @@ export class AgentService {
       const errorMessage = err instanceof Error ? err.message : 'An unknown agent error occurred.';
       this.error.set(errorMessage);
       this.isRunning.set(false);
+      this.runStartedAt.set(null); // Clear the start time
       this.stateService.addErrorMessage(errorMessage);
     }
   }

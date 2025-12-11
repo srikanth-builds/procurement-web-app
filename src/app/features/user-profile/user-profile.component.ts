@@ -5,10 +5,12 @@ import { UserProfileService } from '../../core/services/user-profile.service';
 
 type ProfileSection = 'profile' | 'preferences' | 'memory';
 
+import { UserPreferencesComponent } from './components/user-preferences/user-preferences.component';
+
 @Component({
     selector: 'app-user-profile',
     standalone: true,
-    imports: [CommonModule, LucideAngularModule],
+    imports: [CommonModule, LucideAngularModule, UserPreferencesComponent],
     templateUrl: './user-profile.component.html',
     styleUrl: './user-profile.component.scss'
 })

@@ -661,8 +661,8 @@ export class StateService {
           this.updateSuggestions(suggestions);
         }
       } else if (toolName === 'update_pr_state') {
-        this.handleUpdatePr(args);
-        return { status: 'success', message: 'Purchase Requisition updated' };
+      const prResult = this.handleUpdatePr(args);
+      return prResult;
       }
     } catch (e) {
       console.error('Failed to execute tool logic:', e);
@@ -1017,84 +1017,199 @@ export class StateService {
   }
 
 
-  private handleUpdatePr(args: any): void {
+  private handleUpdatePr(args: any): { status: 'success' | 'error'; message: string; details?: any } {
+    const action = args.action || 'add'; // Default to 'add' for backward compatibility
+    let result: { status: 'success' | 'error'; message: string; details?: any } = {
+      status: 'success',
+      message: '',
+      details: { action, itemsAffected: [], suppliersAffected: [] }
+    };
+
     this.state.update((s) => {
       let updatedPr = { ...s.purchaseRequisition };
-      let validationError = '';
 
-      // Update PR ID
+      // Update PR ID (always allowed)
       if (args.purchase_request_id) {
         updatedPr.prId = args.purchase_request_id;
       }
 
-      // Update justification
+      // Update justification (always allowed)
       if (args.justification) {
         updatedPr.justification = args.justification;
       }
 
-      // Update expected delivery
+      // Update expected delivery (always allowed)
       if (args.expectedDelivery) {
         updatedPr.expectedDelivery = args.expectedDelivery;
       }
 
-      // Add items (by name and quantity)
+      // Handle items based on action
       if (args.items && Array.isArray(args.items)) {
-        const newItems = [...updatedPr.items];
-        for (const item of args.items) {
-          const itemName = item.name;
-          const itemQuantity = item.quantity || 1;
+        if (action === 'add') {
+          // ADD: Add new items to PR - trust backend data directly
+          const newItems = [...updatedPr.items];
+          for (const item of args.items) {
+            const itemName = item.name;
+            const itemQuantity = item.quantity || 1;
 
-          // Check if item already exists in PR
-          if (!newItems.find(i => i.name === itemName)) {
-            // Try to find full product details from history
-            const fullProduct = this.findProductInHistory(s, itemName);
-            if (fullProduct) {
-              newItems.push({ ...fullProduct, quantity: itemQuantity });
+            if (!newItems.find(i => i.name === itemName)) {
+              // Create product card from args - trust the backend
+              const productCard: ProductCard = {
+                name: itemName,
+                description: item.description || '',
+                vendor: item.vendor || '',
+                price: item.price || 0,
+                image_url: item.image_url || '',
+                source_url: item.source_url || '',
+                specifications: item.specifications || [],
+                sku: item.sku || '',
+                quantity: itemQuantity
+              };
+              newItems.push(productCard);
+              result.details.itemsAffected.push({ name: itemName, action: 'added', quantity: itemQuantity });
             } else {
-              // Validation Failed: Item not found in history
-              validationError = `Item '${itemName}' not found in the available product options.Please verify the product name or ask the user to select a product first.`;
-              break;
+              result.details.itemsAffected.push({ name: itemName, action: 'already_exists' });
             }
           }
-        }
-        if (!validationError) {
           updatedPr.items = newItems;
-        }
-      }
+        } else if (action === 'update') {
+          // UPDATE: Modify quantity of existing items
+          const updatedItems = [...updatedPr.items];
+          for (const item of args.items) {
+            const itemName = item.name;
+            const itemQuantity = item.quantity;
+            const existingIndex = updatedItems.findIndex(i => i.name === itemName || i.sku === itemName);
 
-      // Add suppliers (by name)
-      if (args.suppliers && Array.isArray(args.suppliers) && !validationError) {
-        const newSuppliers = [...updatedPr.suppliers];
-        for (const supplierName of args.suppliers) {
-          if (!newSuppliers.find(sup => sup.name === supplierName)) {
-            const fullSupplier = this.findSupplierInHistory(s, supplierName);
-            if (fullSupplier) {
-              newSuppliers.push(fullSupplier);
+            if (existingIndex !== -1) {
+              if (itemQuantity !== undefined) {
+                updatedItems[existingIndex] = { ...updatedItems[existingIndex], quantity: itemQuantity };
+                result.details.itemsAffected.push({ name: itemName, action: 'updated', newQuantity: itemQuantity });
+              }
             } else {
-              // Validation Failed: Supplier not found in history
-              validationError = `Supplier '${supplierName}' not found in the available supplier list.Please verify the supplier name.`;
-              break;
+              // Item not in PR yet - add it with update action (trust backend)
+              const productCard: ProductCard = {
+                name: itemName,
+                description: item.description || '',
+                vendor: item.vendor || '',
+                price: item.price || 0,
+                image_url: item.image_url || '',
+                source_url: item.source_url || '',
+                specifications: item.specifications || [],
+                sku: item.sku || '',
+                quantity: itemQuantity || 1
+              };
+              updatedItems.push(productCard);
+              result.details.itemsAffected.push({ name: itemName, action: 'added', quantity: itemQuantity || 1 });
             }
           }
+          updatedPr.items = updatedItems;
+        } else if (action === 'remove') {
+          // REMOVE: Remove items from PR
+          const itemNamesToRemove = args.items.map((item: any) => item.name);
+          const removedItems: string[] = [];
+
+          for (const itemName of itemNamesToRemove) {
+            const existingIndex = updatedPr.items.findIndex(i => i.name === itemName || i.sku === itemName);
+            if (existingIndex !== -1) {
+              removedItems.push(itemName);
+            }
+          }
+
+          updatedPr.items = updatedPr.items.filter(i =>
+            !itemNamesToRemove.includes(i.name) && !itemNamesToRemove.includes(i.sku)
+          );
+
+          result.details.itemsAffected = removedItems.map(name => ({ name, action: 'removed' }));
         }
-        if (!validationError) {
+      }
+
+      // Handle suppliers based on action
+      if (args.suppliers && Array.isArray(args.suppliers)) {
+        if (action === 'add') {
+          // ADD: Add new suppliers to PR - trust backend data directly
+          const newSuppliers = [...updatedPr.suppliers];
+          for (const supplier of args.suppliers) {
+            // Support both string (supplier name) and object (full supplier data)
+            const supplierName = typeof supplier === 'string' ? supplier : supplier.name;
+            
+            if (!newSuppliers.find(sup => sup.name === supplierName)) {
+              // Create supplier item from args - trust the backend
+              const supplierItem: SupplierItem = typeof supplier === 'object' ? {
+                id: supplier.id || `sup-${Date.now()}`,
+                name: supplier.name,
+                contact: supplier.contact || '',
+                rating: supplier.rating || 0,
+                location: supplier.location || '',
+                status: supplier.status || 'New',
+                website: supplier.website || ''
+              } : {
+                id: `sup-${Date.now()}`,
+                name: supplierName,
+                contact: '',
+                rating: 0,
+                location: '',
+                status: 'New',
+                website: ''
+              };
+              newSuppliers.push(supplierItem);
+              result.details.suppliersAffected.push({ name: supplierName, action: 'added' });
+            } else {
+              result.details.suppliersAffected.push({ name: supplierName, action: 'already_exists' });
+            }
+          }
           updatedPr.suppliers = newSuppliers;
+        } else if (action === 'remove') {
+          // REMOVE: Remove suppliers from PR
+          const supplierNamesToRemove = args.suppliers.map((s: any) => typeof s === 'string' ? s : s.name);
+          const removedSuppliers: string[] = [];
+
+          for (const supplierName of supplierNamesToRemove) {
+            const existingIndex = updatedPr.suppliers.findIndex(sup => sup.name === supplierName);
+            if (existingIndex !== -1) {
+              removedSuppliers.push(supplierName);
+            }
+          }
+
+          updatedPr.suppliers = updatedPr.suppliers.filter(sup =>
+            !supplierNamesToRemove.includes(sup.name)
+          );
+
+          result.details.suppliersAffected = removedSuppliers.map(name => ({ name, action: 'removed' }));
         }
       }
 
-      if (validationError) {
-        // Trigger feedback to agent
-        console.warn('PR Update Validation Failed:', validationError);
+      // Build success message
+      const itemActions = result.details.itemsAffected || [];
+      const supplierActions = result.details.suppliersAffected || [];
+      const messages: string[] = [];
 
+      if (itemActions.length > 0) {
+        const addedItems = itemActions.filter((i: any) => i.action === 'added').map((i: any) => i.name);
+        const updatedItems = itemActions.filter((i: any) => i.action === 'updated').map((i: any) => `${i.name} (qty: ${i.newQuantity})`);
+        const removedItems = itemActions.filter((i: any) => i.action === 'removed').map((i: any) => i.name);
 
-        // Return original state if validation failed (or partial update? User said "abort" effectively)
-        // "it should only add if we have the existing right"
-        // So we should probably NOT update the PR if validation fails.
-        return s;
+        if (addedItems.length > 0) messages.push(`Added items: ${addedItems.join(', ')}`);
+        if (updatedItems.length > 0) messages.push(`Updated items: ${updatedItems.join(', ')}`);
+        if (removedItems.length > 0) messages.push(`Removed items: ${removedItems.join(', ')}`);
       }
+
+      if (supplierActions.length > 0) {
+        const addedSuppliers = supplierActions.filter((s: any) => s.action === 'added').map((s: any) => s.name);
+        const removedSuppliers = supplierActions.filter((s: any) => s.action === 'removed').map((s: any) => s.name);
+
+        if (addedSuppliers.length > 0) messages.push(`Added suppliers: ${addedSuppliers.join(', ')}`);
+        if (removedSuppliers.length > 0) messages.push(`Removed suppliers: ${removedSuppliers.join(', ')}`);
+      }
+
+      if (args.justification) messages.push('Justification updated');
+      if (args.expectedDelivery) messages.push(`Expected delivery set to ${args.expectedDelivery}`);
+
+      result.message = messages.length > 0 ? messages.join('. ') : 'Purchase Requisition updated successfully';
 
       return { ...s, purchaseRequisition: updatedPr };
     });
+
+    return result;
   }
 
   private findProductInHistory(state: AppState, name: string): ProductCard | undefined {
@@ -1142,12 +1257,14 @@ export class StateService {
     const mapping: { [key: string]: string } = {
       buying_support_agent: 'Buying Support Agent',
       custom_specialist: 'Custom Specialist Agent',
-      need_analyzer: 'Procure Assist Agent',
+      catalog_agent: 'Catalog Agent',
       supplier_researcher: 'Supplier Recommendation Agent',
       pre_compliance_agent: 'Pre-Compliance Agent',
       post_compliance_agent: 'Post-Compliance Agent',
       pr_drafter_agent: 'Purchase Requisition Drafting Agent',
       pr_formatter_agent: 'PR Formatting Agent',
+      initial_validation_agent:'Initial Validation Agent',
+      
     };
     return mapping[internalName] || internalName;
   }

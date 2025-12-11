@@ -1,128 +1,191 @@
 @if (isOpen()) {
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm modal-backdrop animate-in fade-in duration-200"
-    (click)="onBackdropClick($event)">
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm modal-backdrop animate-in fade-in duration-200"
+    (click)="onBackdropClick($event)"
+  >
     <div
-        class="bg-background rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col m-4 animate-in zoom-in-95 duration-200">
-        <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b">
-            <h2 class="text-lg font-semibold">Compare Products</h2>
-            <button (click)="close.emit()" class="p-2 hover:bg-muted rounded-full transition-colors">
-                <lucide-icon name="x" class="size-5"></lucide-icon>
-            </button>
-        </div>
+      class="bg-background rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col m-4 animate-in zoom-in-95 duration-200"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between p-4 border-b">
+        <h2 class="text-lg font-semibold">Compare Products</h2>
+        <button (click)="close.emit()" class="p-2 hover:bg-muted rounded-full transition-colors">
+          <lucide-icon name="x" class="size-5"></lucide-icon>
+        </button>
+      </div>
 
-        <!-- Content -->
-        <div class="flex-1 overflow-auto p-6 relative">
-            <!-- Grid Container -->
-            <!-- We calculate the total rows needed: 1 (Image) + 1 (Price) + specs + 1 (Action) -->
-            <div class="min-w-[800px] grid gap-0 relative"
-                [style.grid-template-columns]="'200px repeat(' + products().length + ', minmax(250px, 1fr))'">
-
-                <!-- ============================================= -->
-                <!-- 1. BACKGROUND LAYER (The Glowing Card)        -->
-                <!-- ============================================= -->
-                @for (product of products(); track product.name; let i = $index) {
-                @if (isRecommended(product)) {
-                <!-- Spans from Row 1 to the last row (3 + specKeys length) -->
-                <div class="relative -m-[2px] z-20 pointer-events-none" [style.grid-column]="i + 2"
-                    [style.grid-row]="'1 / span ' + (specKeys().length + 3)">
-
-                    <!-- Recommended Badge (Outside overflow-hidden) -->
-                    <div
-                        class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] px-3 py-1 rounded-b-md font-bold shadow-md uppercase tracking-wider whitespace-nowrap z-40">
-                        Recommended
-                    </div>
-
-                    <!-- The Glowing Border Card (Needs overflow hidden) -->
-                    <div class="absolute inset-0 rounded-xl shadow-2xl overflow-hidden">
-                        <!-- Running Border Animation -->
-                        <div class="absolute inset-[-500%] animate-[spin_4s_linear_infinite]"
-                            style="background: conic-gradient(from 90deg at 50% 50%, #0000 0%, #0000 50%, #10b981 100%); opacity: 1;">
-                        </div>
-
-                        <!-- White Card Background (Mask) -->
-                        <div class="absolute inset-[2px] rounded-[10px] bg-background z-10"></div>
-                    </div>
-                </div>
-                }
-                }
-
-                <!-- ============================================= -->
-                <!-- 2. CONTENT LAYERS (Explicit Row Placement)    -->
-                <!-- ============================================= -->
-
-                <!-- ROW 1: Feature / Image -->
-                <!-- Explicitly set grid-row="1" for everything here -->
-                <div class="col-start-1 p-4 text-left font-semibold bg-muted/30 z-10 border-b border-border/50"
-                    [style.grid-row]="1">Feature</div>
-
-                @for (product of products(); track product.name; let i = $index) {
-                <div class="p-4 text-left flex flex-col gap-3 relative transition-colors" [style.grid-column]="i + 2"
-                    [style.grid-row]="1" [class.z-30]="isRecommended(product)" [class.z-10]="!isRecommended(product)"
-                    [class.border-b]="!isRecommended(product)" [class.border-border/50]="!isRecommended(product)"
-                    [class.bg-background]="!isRecommended(product)" [class.!bg-transparent]="isRecommended(product)"
-                    [class.!border-none]="isRecommended(product)">
-
-                    <div class="h-32 w-full relative rounded-lg overflow-hidden border bg-muted">
-                        <img [ngSrc]="getImageUrl(product)" [alt]="product.name" fill class="object-cover">
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-lg leading-tight">{{ product.name }}</h3>
-                        <p class="text-xs text-muted-foreground mt-1 line-clamp-2 font-normal">{{ product.description }}
-                        </p>
-                    </div>
-                </div>
-                }
-
-                <!-- ROW 2: Price -->
-                <div class="col-start-1 p-4 font-semibold bg-muted/10 border-b border-border/50 flex items-center"
-                    [style.grid-row]="2">Price</div>
-
-                @for (product of products(); track product.name; let i = $index) {
-                <div class="p-4 flex items-center relative" [style.grid-column]="i + 2" [style.grid-row]="2"
-                    [class.z-30]="isRecommended(product)" [class.z-10]="!isRecommended(product)"
-                    [class.border-b]="!isRecommended(product)" [class.border-border/50]="!isRecommended(product)"
-                    [class.!bg-transparent]="isRecommended(product)" [class.!border-none]="isRecommended(product)">
-                    <span class="text-xl font-bold text-primary">{{ product.price | currency }}</span>
-                </div>
-                }
-
-                <!-- ROWS 3+: Specifications -->
-                <!-- We use 'k' to calculate the row index: k + 3 -->
-                @for (key of specKeys(); track key; let k = $index) {
-                <div class="col-start-1 p-4 font-medium text-muted-foreground capitalize bg-muted/10 border-b border-border/50 flex items-center"
-                    [style.grid-row]="k + 3">
-                    {{ formatKey(key) }}
+      <!-- Content -->
+      <div class="flex-1 overflow-auto p-6 relative">
+        <!-- Grid Container -->
+        <!-- We calculate the total rows needed: 1 (Image) + 1 (Price) + specs + 1 (Action) -->
+        <div
+          class="min-w-[800px] grid gap-0 relative"
+          [style.grid-template-columns]="
+            '200px repeat(' + products().length + ', minmax(250px, 1fr))'
+          "
+        >
+          <!-- ============================================= -->
+          <!-- 1. BACKGROUND LAYER (The Glowing Card)        -->
+          <!-- ============================================= -->
+          @for (product of products(); track product.name; let i = $index) {
+            @if (isRecommended(product)) {
+              <!-- Spans from Row 1 to the last row (3 + specKeys length) -->
+              <div
+                class="relative -m-[2px] z-20 pointer-events-none"
+                [style.grid-column]="i + 2"
+                [style.grid-row]="'1 / span ' + (specKeys().length + 3)"
+              >
+                <!-- Recommended Badge (Outside overflow-hidden) -->
+                <div
+                  class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] px-3 py-1 rounded-b-md font-bold shadow-md uppercase tracking-wider whitespace-nowrap z-40"
+                >
+                  Recommended
                 </div>
 
-                @for (product of products(); track product.name; let i = $index) {
-                <div class="p-4 flex items-center relative" [style.grid-column]="i + 2" [style.grid-row]="k + 3"
-                    [class.z-30]="isRecommended(product)" [class.z-10]="!isRecommended(product)"
-                    [class.border-b]="!isRecommended(product)" [class.border-border/50]="!isRecommended(product)"
-                    [class.!bg-transparent]="isRecommended(product)" [class.!border-none]="isRecommended(product)">
-                    {{ getSpecValue(product, key) }}
-                </div>
-                }
-                }
+                <!-- The Glowing Border Card (Needs overflow hidden) -->
+                <div class="absolute inset-0 rounded-xl shadow-2xl overflow-hidden">
+                  <!-- Running Border Animation -->
+                  <div
+                    class="absolute inset-[-500%] animate-[spin_4s_linear_infinite]"
+                    style="
+                      background: conic-gradient(
+                        from 90deg at 50% 50%,
+                        #0000 0%,
+                        #0000 50%,
+                        #10b981 100%
+                      );
+                      opacity: 1;
+                    "
+                  ></div>
 
-                <!-- FINAL ROW: Actions -->
-                <!-- Row Index = Length of keys + 3 -->
-                <div class="col-start-1 p-4 bg-muted/10 flex items-center rounded-bl-xl"
-                    [style.grid-row]="specKeys().length + 3"></div>
-
-                @for (product of products(); track product.name; let i = $index) {
-                <div class="p-4 flex items-center pb-6 relative" [style.grid-column]="i + 2"
-                    [style.grid-row]="specKeys().length + 3" [class.z-30]="isRecommended(product)"
-                    [class.z-10]="!isRecommended(product)" [class.!bg-transparent]="isRecommended(product)">
-                    <button
-                        class="w-full inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        (click)="addToPr.emit(product)" [disabled]="isProductInPr(product)">
-                        {{ isProductInPr(product) ? 'Added' : 'Add to PR' }}
-                    </button>
+                  <!-- White Card Background (Mask) -->
+                  <div class="absolute inset-[2px] rounded-[10px] bg-background z-10"></div>
                 </div>
-                }
+              </div>
+            }
+          }
+
+          <!-- ============================================= -->
+          <!-- 2. CONTENT LAYERS (Explicit Row Placement)    -->
+          <!-- ============================================= -->
+
+          <!-- ROW 1: Feature / Image -->
+          <!-- Explicitly set grid-row="1" for everything here -->
+          <div
+            class="col-start-1 p-4 text-left font-semibold bg-muted/30 z-10 border-b border-border/50"
+            [style.grid-row]="1"
+          >
+            Feature
+          </div>
+
+          @for (product of products(); track product.name; let i = $index) {
+            <div
+              class="p-4 text-left flex flex-col gap-3 relative transition-colors"
+              [style.grid-column]="i + 2"
+              [style.grid-row]="1"
+              [class.z-30]="isRecommended(product)"
+              [class.z-10]="!isRecommended(product)"
+              [class.border-b]="!isRecommended(product)"
+              [class.border-border/50]="!isRecommended(product)"
+              [class.bg-background]="!isRecommended(product)"
+              [class.!bg-transparent]="isRecommended(product)"
+              [class.!border-none]="isRecommended(product)"
+            >
+              <div class="h-32 w-full relative rounded-lg overflow-hidden border bg-muted">
+                <img
+                  [src]="getImageUrl(product)"
+                  [alt]="product.name"
+                  class="object-cover w-full h-full"
+                  (error)="$event.target.src = 'assets/placeholder-product.png'"
+                />
+              </div>
+              <div>
+                <h3 class="font-bold text-lg leading-tight">{{ product.name }}</h3>
+                <p class="text-xs text-muted-foreground mt-1 line-clamp-2 font-normal">
+                  {{ product.description }}
+                </p>
+              </div>
             </div>
+          }
+
+          <!-- ROW 2: Price -->
+          <div
+            class="col-start-1 p-4 font-semibold bg-muted/10 border-b border-border/50 flex items-center"
+            [style.grid-row]="2"
+          >
+            Price
+          </div>
+
+          @for (product of products(); track product.name; let i = $index) {
+            <div
+              class="p-4 flex items-center relative"
+              [style.grid-column]="i + 2"
+              [style.grid-row]="2"
+              [class.z-30]="isRecommended(product)"
+              [class.z-10]="!isRecommended(product)"
+              [class.border-b]="!isRecommended(product)"
+              [class.border-border/50]="!isRecommended(product)"
+              [class.!bg-transparent]="isRecommended(product)"
+              [class.!border-none]="isRecommended(product)"
+            >
+              <span class="text-xl font-bold text-primary">{{ product.price | currency }}</span>
+            </div>
+          }
+
+          <!-- ROWS 3+: Specifications -->
+          <!-- We use 'k' to calculate the row index: k + 3 -->
+          @for (key of specKeys(); track key; let k = $index) {
+            <div
+              class="col-start-1 p-4 font-medium text-muted-foreground capitalize bg-muted/10 border-b border-border/50 flex items-center"
+              [style.grid-row]="k + 3"
+            >
+              {{ formatKey(key) }}
+            </div>
+
+            @for (product of products(); track product.name; let i = $index) {
+              <div
+                class="p-4 flex items-center relative"
+                [style.grid-column]="i + 2"
+                [style.grid-row]="k + 3"
+                [class.z-30]="isRecommended(product)"
+                [class.z-10]="!isRecommended(product)"
+                [class.border-b]="!isRecommended(product)"
+                [class.border-border/50]="!isRecommended(product)"
+                [class.!bg-transparent]="isRecommended(product)"
+                [class.!border-none]="isRecommended(product)"
+              >
+                {{ getSpecValue(product, key) }}
+              </div>
+            }
+          }
+
+          <!-- FINAL ROW: Actions -->
+          <!-- Row Index = Length of keys + 3 -->
+          <div
+            class="col-start-1 p-4 bg-muted/10 flex items-center rounded-bl-xl"
+            [style.grid-row]="specKeys().length + 3"
+          ></div>
+
+          @for (product of products(); track product.name; let i = $index) {
+            <div
+              class="p-4 flex items-center pb-6 relative"
+              [style.grid-column]="i + 2"
+              [style.grid-row]="specKeys().length + 3"
+              [class.z-30]="isRecommended(product)"
+              [class.z-10]="!isRecommended(product)"
+              [class.!bg-transparent]="isRecommended(product)"
+            >
+              <button
+                class="w-full inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="addToPr.emit(product)"
+                [disabled]="isProductInPr(product)"
+              >
+                {{ isProductInPr(product) ? 'Added' : 'Add to PR' }}
+              </button>
+            </div>
+          }
         </div>
+      </div>
     </div>
-</div>
+  </div>
 }

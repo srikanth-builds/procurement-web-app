@@ -1,0 +1,169 @@
+<div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+  <div>
+    <h2 class="text-lg font-medium">Preferences</h2>
+    <p class="text-sm text-muted-foreground">Manage your application preferences.</p>
+  </div>
+  <div class="h-px bg-border"></div>
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-12">
+      <lucide-icon name="loader-2" class="size-8 animate-spin text-muted-foreground"></lucide-icon>
+    </div>
+  } @else if (loadingError()) {
+    <div class="p-6 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive">
+      <div class="flex items-center gap-2 font-semibold mb-2">
+        <lucide-icon name="alert-circle" class="size-5"></lucide-icon>
+        Error Loading Preferences
+      </div>
+      <p class="break-words whitespace-pre-wrap">{{ loadingError() }}</p>
+      <button
+        (click)="loadPreferences()"
+        class="mt-4 text-sm font-medium underline hover:no-underline"
+      >
+        Try Again
+      </button>
+    </div>
+  } @else {
+    <form [formGroup]="preferencesForm" (ngSubmit)="savePreferences()" class="space-y-8">
+      <!-- Appearance Section -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Appearance
+        </h3>
+        <div class="grid gap-4">
+          <div class="flex items-center justify-between p-4 rounded-lg border bg-card">
+            <div class="space-y-0.5">
+              <label class="text-base font-medium">Theme</label>
+              <p class="text-sm text-muted-foreground">Select your preferred interface theme.</p>
+            </div>
+            <div class="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+              <button
+                type="button"
+                (click)="preferencesForm.patchValue({ theme: 'light' })"
+                [class.bg-background]="preferencesForm.get('theme')?.value === 'light'"
+                [class.shadow-sm]="preferencesForm.get('theme')?.value === 'light'"
+                class="p-2 rounded-md transition-all"
+              >
+                <lucide-icon name="sun" class="size-5"></lucide-icon>
+              </button>
+              <button
+                type="button"
+                (click)="preferencesForm.patchValue({ theme: 'dark' })"
+                [class.bg-background]="preferencesForm.get('theme')?.value === 'dark'"
+                [class.shadow-sm]="preferencesForm.get('theme')?.value === 'dark'"
+                class="p-2 rounded-md transition-all"
+              >
+                <lucide-icon name="moon" class="size-5"></lucide-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Preferences Section -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            General Preference
+          </h3>
+          <div class="group relative flex items-center justify-center">
+            <lucide-icon
+              name="info"
+              class="size-4 text-muted-foreground/70 hover:text-primary transition-colors cursor-help"
+            ></lucide-icon>
+            <!-- Tooltip -->
+            <div
+              class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-xs rounded-md border shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50"
+            >
+              This may influence the style and tone when you interact with the agents.
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-4">
+          <div class="space-y-2">
+            <textarea
+              formControlName="custom_instructions"
+              rows="4"
+              class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              placeholder="E.g., Please be concise, use formal language, and always display prices in USD."
+            ></textarea>
+            <p class="text-xs text-muted-foreground">
+              Provide specific instructions for how you want the AI agents to behave.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications Section -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Notifications
+        </h3>
+        <div class="grid gap-4">
+          <!-- Email Notifications -->
+          <div class="flex items-center justify-between p-4 rounded-lg border bg-card">
+            <div class="space-y-0.5">
+              <label class="text-base font-medium">Email Notifications</label>
+              <p class="text-sm text-muted-foreground">Receive updates and alerts via email.</p>
+            </div>
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                formControlName="notifications_email"
+                class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <!-- Push Notifications -->
+          <div class="flex items-center justify-between p-4 rounded-lg border bg-card">
+            <div class="space-y-0.5">
+              <label class="text-base font-medium">Push Notifications</label>
+              <p class="text-sm text-muted-foreground">Receive real-time alerts on your device.</p>
+            </div>
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                formControlName="notifications_push"
+                class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Button & Message -->
+      <div class="flex items-center gap-4 pt-4">
+        <button
+          type="submit"
+          [disabled]="isSaving() || preferencesForm.invalid"
+          class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+        >
+          @if (isSaving()) {
+            <lucide-icon name="loader-2" class="mr-2 size-4 animate-spin"></lucide-icon>
+            Saving...
+          } @else {
+            Save Preferences
+          }
+        </button>
+
+        @if (saveMessage(); as msg) {
+          @if (msg.startsWith('Error:')) {
+            <div
+              class="flex items-center gap-2 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md border border-destructive/20 max-w-md"
+            >
+              <lucide-icon name="alert-circle" class="size-4 shrink-0"></lucide-icon>
+              <span class="break-words whitespace-pre-wrap">{{ msg }}</span>
+            </div>
+          } @else {
+            <span class="text-sm text-green-600 flex items-center gap-2">
+              <lucide-icon name="check" class="size-4"></lucide-icon>
+              {{ msg }}
+            </span>
+          }
+        }
+      </div>
+    </form>
+  }
+</div>

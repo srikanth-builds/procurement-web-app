@@ -175,21 +175,7 @@
         <!-- Preferences Section -->
         @if (activeSection() === 'preferences') {
           <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div>
-              <h2 class="text-lg font-medium">Preferences</h2>
-              <p class="text-sm text-muted-foreground">Manage your application preferences.</p>
-            </div>
-            <div class="h-px bg-border"></div>
-
-            <div class="p-12 text-center border rounded-xl border-dashed">
-              <div
-                class="mx-auto size-12 rounded-full bg-muted/50 flex items-center justify-center mb-4"
-              >
-                <lucide-icon name="settings" class="size-6 text-muted-foreground"></lucide-icon>
-              </div>
-              <h3 class="text-lg font-medium">Coming Soon</h3>
-              <p class="text-muted-foreground mt-1">Preferences settings are under development.</p>
-            </div>
+            <app-user-preferences></app-user-preferences>
           </div>
         }
 

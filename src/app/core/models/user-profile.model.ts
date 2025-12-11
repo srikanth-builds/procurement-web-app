@@ -28,6 +28,8 @@ export interface UserProfile {
     created_by: string;
     last_updated_at: string;
     last_updated_by: string;
+    preferences?: Record<string, any>;
+    preferences_safety_score?: number;
 }
 
 export interface UserProfileResponse {

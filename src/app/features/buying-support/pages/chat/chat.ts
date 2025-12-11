@@ -49,6 +49,10 @@ export class Chat {
 
     userInput = signal('');
     currentMode = signal<'ask' | 'agent'>('ask');
+    
+    // Elapsed time tracking
+    elapsedSeconds = signal<number>(0);
+    private timerInterval: ReturnType<typeof setInterval> | null = null;
 
     toggleMode() {
         this.currentMode.update(mode => {
@@ -79,6 +83,29 @@ export class Chat {
 
         // Load threads on init
         // Threads are loaded via httpResource signal
+
+        // Effect to track elapsed time when loading
+        effect(() => {
+            const loading = this.isLoading();
+            if (loading) {
+                // Start the timer
+                this.elapsedSeconds.set(0);
+                this.timerInterval = setInterval(() => {
+                    const startTime = this.agentService.runStartedAt();
+                    if (startTime) {
+                        const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                        this.elapsedSeconds.set(elapsed);
+                    }
+                }, 1000);
+            } else {
+                // Stop the timer
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+                this.elapsedSeconds.set(0);
+            }
+        });
     }
 
     // --- Event Handlers from Children ---

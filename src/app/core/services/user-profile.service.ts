@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { httpResource } from '@angular/common/http';
+import { httpResource, HttpClient } from '@angular/common/http';
 import { UserProfile, UserProfileResponse } from '../models/user-profile.model';
 import { environment } from '../../../environments/environments';
 
@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environments';
     providedIn: 'root'
 })
 export class UserProfileService {
+    private http = inject(HttpClient);
 
     // Resource to fetch user profile
     userProfileResource = httpResource<UserProfileResponse>(() => {
@@ -20,5 +21,13 @@ export class UserProfileService {
     });
 
     constructor() { }
+
+    updatePreferences(preferences: Record<string, any>) {
+        return this.http.put<UserProfile>(`${environment.agentUrl}user/preferences`, preferences);
+    }
+
+    getPreferences() {
+        return this.http.get<Record<string, any>>(`${environment.agentUrl}user/preferences`);
+    }
 }
 

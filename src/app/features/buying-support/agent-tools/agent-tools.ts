@@ -88,10 +88,15 @@ export const supplierListTool = {
 
 export const updatePrTool = {
   name: 'update_pr_state',
-  description: 'This tool is to update the UI state of the Purchase Requisition (PR) form. Use this to add items, suppliers, or update justification/delivery date based on user request.',
+  description: 'This tool is to update the UI state of the Purchase Requisition (PR) form. Use this to add, update, or remove items/suppliers, or update justification/delivery date based on user request.',
   parameters: {
     type: 'object',
     properties: {
+      action: {
+        type: 'string',
+        enum: ['add', 'update', 'remove'],
+        description: 'The action to perform: "add" to add new items/suppliers (default), "update" to modify existing items (e.g., quantity), "remove" to delete items/suppliers from the PR.'
+      },
       purchase_request_id: { type: 'string', description: 'The ID of the purchase requisition (e.g. PR-2024-001)' },
       justification: { type: 'string', description: 'Justification for the purchase' },
       items: {
@@ -102,14 +107,14 @@ export const updatePrTool = {
             name: { type: 'string' },
             quantity: { type: 'number' }
           },
-          required: ['name', 'quantity']
+          required: ['name']
         },
-        description: 'List of products to add to the PR. IMPORTANT: Only call this AFTER you have shown products to the user using "show_products_to_user".'
+        description: 'List of products. For "add": adds to PR (requires quantity). For "update": modifies quantity. For "remove": removes from PR (only name needed). IMPORTANT: Only call with "add" AFTER you have shown products using "show_products_to_user".'
       },
       suppliers: {
         type: 'array',
         items: { type: 'string' },
-        description: 'List of supplier names to add to the PR. IMPORTANT: Only call this AFTER you have shown the supplier list using "supplier_list".'
+        description: 'List of supplier names. For "add": adds to PR. For "remove": removes from PR. IMPORTANT: Only call with "add" AFTER you have shown the supplier list using "supplier_list".'
       },
       expectedDelivery: { type: 'string', description: 'Expected delivery date (YYYY-MM-DD)' }
     },

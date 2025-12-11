@@ -171,18 +171,33 @@ export class ConversationStreamComponent {
   });
 
   constructor() {
+    // Track the previous stream length to detect new items
+    let previousStreamLength = 0;
 
     // Effect to handle auto-scrolling when new messages arrive
     effect(() => {
       // Track changes to the chat stream
       const stream = this.state().chatStream;
+      const currentLength = stream.length;
+      const hasNewItems = currentLength > previousStreamLength;
 
-      // If the user is currently at the bottom, scroll to the bottom after the view updates
-      if (this.isUserAtBottom()) {
-        setTimeout(() => {
+      // Check if user is at the bottom BEFORE we update
+      // We need to do this synchronously before DOM updates
+      const shouldScroll = this.isUserAtBottom() || hasNewItems;
+
+      if (shouldScroll && this.chatMessagesContainer) {
+        // Use requestAnimationFrame to scroll after DOM updates
+        requestAnimationFrame(() => {
           this.scrollToBottom();
-        }, 100); // Small delay to allow DOM to render
+        });
       }
+
+      previousStreamLength = currentLength;
+    });
+
+    // Also set up an afterNextRender to scroll on initial load
+    afterNextRender(() => {
+      this.scrollToBottom();
     });
   }
 
@@ -264,12 +279,12 @@ export class ConversationStreamComponent {
    * Scroll to bottom of chat
    */
   private scrollToBottom(): void {
-    if (this.chatMessagesContainer) {
-      // Use setTimeout to ensure DOM has fully rendered
-      setTimeout(() => {
-        this.chatMessagesContainer.nativeElement.scrollTop =
-          this.chatMessagesContainer.nativeElement.scrollHeight;
-      }, 0);
+    if (this.chatMessagesContainer?.nativeElement) {
+      const element = this.chatMessagesContainer.nativeElement;
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior: 'instant' // Use 'instant' during streaming for smoother experience
+      });
     }
   }
   // Add method
@@ -282,7 +297,13 @@ export class ConversationStreamComponent {
    */
   scrollToBottomForced(): void {
     this.isUserAtBottom.set(true);
-    this.scrollToBottom();
+    if (this.chatMessagesContainer?.nativeElement) {
+      const element = this.chatMessagesContainer.nativeElement;
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }
   focusInput(): void {
     if (this.messageInput) {
@@ -302,6 +323,18 @@ export class ConversationStreamComponent {
     // Only show thinking if it's the last item and the agent is currently running
     return isLastItem && isRunning;
   }
+
+  showGenericLoading = computed(() => {
+    if (!this.isLoading()) return false;
+    
+    const stream = this.state().chatStream;
+    if (stream.length === 0) return true;
+    
+    const lastItem = stream[stream.length - 1];
+    // If the last item is a thoughts panel, we are already showing the specific thinking UI
+    // via the thinking-group in the loop
+    return !this.isThoughtsPanel(lastItem);
+  });
 
   getToolRequest(item: ToolCallState): string | null {
     // Priority 1: Display Text from Activity Snapshot
