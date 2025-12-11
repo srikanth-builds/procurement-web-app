@@ -626,7 +626,7 @@ export class StateService {
     }
   }
 
-  public executeToolSideEffects(toolCallId: string): { status: 'success' | 'error', message: string } | null {
+  public executeToolSideEffects(toolCallId: string): { status: 'success' | 'error', message: string, details?: any } | null {
     const toolCall = this.state().toolCalls.find(tc => tc.toolCallId === toolCallId);
     if (!toolCall) return null;
 
@@ -637,39 +637,44 @@ export class StateService {
         args = JSON.parse(toolCall.args);
       } catch (e) {
         console.error('Failed to parse tool args', e);
-        return { status: 'error', message: 'Failed to parse tool arguments' };
+        // Don't return error for show-only tools - let backend handle
+        return null;
       }
     }
 
     try {
+      // Show-only tools: execute side effects but return null (backend handles response)
       if (toolName === 'show_products_to_user' || toolName === 'product_options') {
         const products = args['products'];
         if (products) {
           this.updateProductOptions(products);
-
         }
+        return null; // Backend handles response
       } else if (toolName === 'supplier_list') {
-        // Inject mock data if args are empty or if explicitly requested for demo
         let suppliers = args['suppliers'];
         if (!suppliers || suppliers.length === 0) {
           console.warn("No suppliers provided");
         }
         this.updateSuppliers(suppliers);
+        return null; // Backend handles response
       } else if (toolName === 'show_suggestions') {
         const suggestions = args['suggestions'];
         if (suggestions) {
           this.updateSuggestions(suggestions);
         }
+        return null; // Backend handles response
       } else if (toolName === 'update_pr_state') {
-      const prResult = this.handleUpdatePr(args);
-      return prResult;
+        // This is a client-side tool that requires a response from frontend
+        const prResult = this.handleUpdatePr(args);
+        return prResult;
       }
+      // ask_user_confirmation is handled separately by ConfirmationToolComponent
     } catch (e) {
       console.error('Failed to execute tool logic:', e);
       return { status: 'error', message: `Tool execution failed: ${e}` };
     }
 
-    // Return null if no client-side tool matched (e.g. server-side tool)
+    // Return null for server-side tools or tools handled via user interaction
     return null;
   }
 
