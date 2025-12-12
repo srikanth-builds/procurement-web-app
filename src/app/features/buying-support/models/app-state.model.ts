@@ -129,6 +129,13 @@ export interface Artifact {
   proxy_download_url: string;
 }
 
+export interface MemoryStatus {
+  preloadedCount: number | null;
+  lastPreloaded: Date | null;
+  isSaving: boolean;
+  activeScope: 'user' | 'org' | 'disabled' | null;
+}
+
 export interface AppState {
   runStatus: 'idle' | 'running';
   currentAgentName: string;
@@ -141,6 +148,7 @@ export interface AppState {
   suggestions: string[];
   purchaseRequisition: PurchaseRequisition;
   artifacts: Artifact[];
+  memoryStatus: MemoryStatus;
   error: string | null;
 }
 

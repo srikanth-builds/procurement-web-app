@@ -182,25 +182,7 @@
         <!-- Memory Section -->
         @if (activeSection() === 'memory') {
           <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div>
-              <h2 class="text-lg font-medium">Memory</h2>
-              <p class="text-sm text-muted-foreground">
-                View and manage what the agent remembers about you.
-              </p>
-            </div>
-            <div class="h-px bg-border"></div>
-
-            <div class="p-12 text-center border rounded-xl border-dashed">
-              <div
-                class="mx-auto size-12 rounded-full bg-muted/50 flex items-center justify-center mb-4"
-              >
-                <lucide-icon name="brain" class="size-6 text-muted-foreground"></lucide-icon>
-              </div>
-              <h3 class="text-lg font-medium">Coming Soon</h3>
-              <p class="text-muted-foreground mt-1">
-                Memory management features are under development.
-              </p>
-            </div>
+            <app-agent-memory></app-agent-memory>
           </div>
         }
       }

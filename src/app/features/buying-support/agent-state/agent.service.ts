@@ -13,6 +13,7 @@ export interface ContextItem {
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { productOptionsTool, suggestionTool, supplierListTool, updatePrTool, askUserConfirmationTool } from '../agent-tools/agent-tools';
+import { MemoryService } from '../../../core/services/memory.service';
 
 @Injectable({ providedIn: 'root' })
 export class AgentService {
@@ -20,6 +21,7 @@ export class AgentService {
   private mode: 'ask' | 'agent' = 'ask';
   private http = inject(HttpClient);
   private stateService = inject(StateService);
+  private memoryService = inject(MemoryService);
   currentThreadId = signal<string>(uuidv4()); // This ID will now persist
 
   isRunning = signal(false);
@@ -163,9 +165,19 @@ export class AgentService {
 
     const combinedContext = this.buildContext(additionalContext);
 
+    // CRITICAL: Set agent state with user_id and memory_scope for memory feature
+    // This state gets synced to the backend session automatically
+    const memoryScope = this.memoryService.memoryScope();
+    this.agent.state = {
+      ...this.agent.state,
+      user_id: 'EMP-2024-001',
+      memory_scope: memoryScope,
+      // org_id is required when memory_scope is 'org'
+      ...(memoryScope === 'org' && { org_id: 'procureflow' }),
+    };
+
     try {
       await this.agent.runAgent({
-
         tools: [suggestionTool, productOptionsTool, supplierListTool, updatePrTool, askUserConfirmationTool],
         context: combinedContext,
         forwardedProps: forwardedProps,

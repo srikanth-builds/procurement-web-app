@@ -1,0 +1,193 @@
+<div class="space-y-6">
+  <div>
+    <h2 class="text-lg font-medium">Agent Memory</h2>
+    <p class="text-sm text-muted-foreground">View and manage what the agent remembers about you.</p>
+  </div>
+  <div class="h-px bg-border"></div>
+
+  <!-- Memory Scope Section -->
+  <div class="p-6 border rounded-xl bg-card space-y-4">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <lucide-icon name="brain" class="size-5 text-primary"></lucide-icon>
+      </div>
+      <div>
+        <h3 class="font-semibold">Memory Scope</h3>
+        <p class="text-sm text-muted-foreground">Control how the agent remembers information</p>
+      </div>
+    </div>
+
+    <div class="grid gap-3">
+      @for (option of scopeOptions; track option.value) {
+        <button
+          (click)="updateScope(option.value)"
+          [class.border-primary]="selectedScope() === option.value"
+          [class.bg-primary/5]="selectedScope() === option.value"
+          [disabled]="scopeUpdating()"
+          class="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors text-left disabled:opacity-50"
+        >
+          <div
+            class="size-5 rounded-full border-2 flex items-center justify-center transition-colors"
+            [class.border-primary]="selectedScope() === option.value"
+            [class.bg-primary]="selectedScope() === option.value"
+          >
+            @if (selectedScope() === option.value) {
+              <div class="size-2 rounded-full bg-white"></div>
+            }
+          </div>
+          <div class="flex-1">
+            <div class="font-medium">{{ option.label }}</div>
+            <div class="text-sm text-muted-foreground">{{ option.description }}</div>
+          </div>
+          @if (scopeUpdating() && selectedScope() === option.value) {
+            <lucide-icon
+              name="loader-2"
+              class="size-4 animate-spin text-muted-foreground"
+            ></lucide-icon>
+          }
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Memory Stats -->
+  @if (stats(); as s) {
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="p-4 border rounded-lg bg-card/50">
+        <div class="text-xs text-muted-foreground mb-1">Total Memories</div>
+        <div class="text-2xl font-bold">{{ s.total_memories }}</div>
+      </div>
+      <div class="p-4 border rounded-lg bg-card/50">
+        <div class="text-xs text-muted-foreground mb-1">Categories</div>
+        <div class="text-2xl font-bold">{{ categories().length }}</div>
+      </div>
+      <div class="p-4 border rounded-lg bg-card/50">
+        <div class="text-xs text-muted-foreground mb-1">Oldest</div>
+        <div class="text-sm font-medium">
+          {{ s.oldest_memory ? formatDate(s.oldest_memory) : '-' }}
+        </div>
+      </div>
+      <div class="p-4 border rounded-lg bg-card/50">
+        <div class="text-xs text-muted-foreground mb-1">Newest</div>
+        <div class="text-sm font-medium">
+          {{ s.newest_memory ? formatDate(s.newest_memory) : '-' }}
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Memories List -->
+  <div class="p-6 border rounded-xl bg-card space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <lucide-icon name="database" class="size-5 text-muted-foreground"></lucide-icon>
+        <h3 class="font-semibold">Stored Memories</h3>
+      </div>
+      @if (memories().length > 0) {
+        <button
+          (click)="clearAllMemories()"
+          [disabled]="isClearingAll()"
+          class="text-sm text-destructive hover:text-destructive/80 flex items-center gap-1 disabled:opacity-50"
+        >
+          @if (isClearingAll()) {
+            <lucide-icon name="loader-2" class="size-3 animate-spin"></lucide-icon>
+          } @else {
+            <lucide-icon name="trash-2" class="size-3"></lucide-icon>
+          }
+          Clear All
+        </button>
+      }
+    </div>
+
+    <!-- Category Filters -->
+    @if (categories().length > 0) {
+      <div class="flex flex-wrap gap-2">
+        <button
+          (click)="filterByCategory(null)"
+          [class.bg-primary]="selectedCategory() === null"
+          [class.text-primary-foreground]="selectedCategory() === null"
+          class="px-3 py-1 text-xs rounded-full border hover:bg-accent transition-colors"
+        >
+          All
+        </button>
+        @for (cat of categories(); track cat) {
+          <button
+            (click)="filterByCategory(cat)"
+            [class.bg-primary]="selectedCategory() === cat"
+            [class.text-primary-foreground]="selectedCategory() === cat"
+            class="px-3 py-1 text-xs rounded-full border hover:bg-accent transition-colors capitalize"
+          >
+            {{ cat }}
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-8">
+        <lucide-icon
+          name="loader-2"
+          class="size-6 animate-spin text-muted-foreground"
+        ></lucide-icon>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (error(); as err) {
+      <div class="p-4 rounded-lg bg-destructive/10 text-destructive flex items-center gap-2">
+        <lucide-icon name="alert-circle" class="size-4"></lucide-icon>
+        {{ err }}
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (!isLoading() && memories().length === 0) {
+      <div class="py-12 text-center">
+        <div class="mx-auto size-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+          <lucide-icon name="brain" class="size-6 text-muted-foreground"></lucide-icon>
+        </div>
+        <h4 class="font-medium">No Memories Yet</h4>
+        <p class="text-sm text-muted-foreground mt-1">
+          The agent will learn about you as you interact.
+        </p>
+      </div>
+    }
+
+    <!-- Memory Items -->
+    @if (!isLoading() && memories().length > 0) {
+      <div class="space-y-2 max-h-96 overflow-y-auto">
+        @for (memory of memories(); track memory.id) {
+          <div
+            class="group flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="text-sm">{{ memory.fact }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground capitalize"
+                >
+                  {{ memory.category }}
+                </span>
+                <span class="text-xs text-muted-foreground">
+                  {{ formatDate(memory.created_at) }}
+                </span>
+              </div>
+            </div>
+            <button
+              (click)="deleteMemory(memory.id)"
+              [disabled]="isDeleting() === memory.id"
+              class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all disabled:opacity-50"
+            >
+              @if (isDeleting() === memory.id) {
+                <lucide-icon name="loader-2" class="size-4 animate-spin"></lucide-icon>
+              } @else {
+                <lucide-icon name="trash-2" class="size-4"></lucide-icon>
+              }
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

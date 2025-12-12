@@ -18,6 +18,7 @@ import { HistoryComponent } from '../../components/history/history.component';
 import { StateService } from '../../agent-state/state.service';
 import { SuggestionsComponent } from '../../components/suggestions/suggestions.component';
 import { ResourceExhaustedErrorComponent } from '../../components/resource-exhausted-error/resource-exhausted-error.component';
+import { MemoryService } from '../../../../core/services/memory.service';
 
 
 
@@ -43,6 +44,11 @@ export class Chat {
     isLoading = this.agentService.isRunning;
     error = this.agentService.error;
     isResourceExhausted = computed(() => this.stateService.state().isResourceExhausted);
+
+    // Memory status
+    private memoryService = inject(MemoryService);
+    memoryStatus = computed(() => this.stateService.state().memoryStatus);
+    isMemoryEnabled = computed(() => this.memoryService.memoryScope() !== 'disabled');
 
     // Expose state signals to the template
     state = computed(() => this.stateService.state())

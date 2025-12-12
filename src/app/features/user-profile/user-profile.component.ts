@@ -6,11 +6,12 @@ import { UserProfileService } from '../../core/services/user-profile.service';
 type ProfileSection = 'profile' | 'preferences' | 'memory';
 
 import { UserPreferencesComponent } from './components/user-preferences/user-preferences.component';
+import { AgentMemoryComponent } from './components/agent-memory/agent-memory.component';
 
 @Component({
     selector: 'app-user-profile',
     standalone: true,
-    imports: [CommonModule, LucideAngularModule, UserPreferencesComponent],
+    imports: [CommonModule, LucideAngularModule, UserPreferencesComponent, AgentMemoryComponent],
     templateUrl: './user-profile.component.html',
     styleUrl: './user-profile.component.scss'
 })

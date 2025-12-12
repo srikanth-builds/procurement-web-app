@@ -11,6 +11,7 @@ import {
   SupplierListPanel,
   PurchaseRequisition,
   SearchProgressPanel,
+  MemoryStatus,
 } from '../models/app-state.model';
 import {
   BaseEvent,
@@ -40,6 +41,12 @@ const initialState: AppState = {
   toolCalls: [], // Initialized
   chatStream: [],
   artifacts: [],
+  memoryStatus: {
+    preloadedCount: null,
+    lastPreloaded: null,
+    isSaving: false,
+    activeScope: null,
+  },
   purchaseRequisition: {
     prId: '',
     requester: { name: 'Sarah Johnson', contact: 'sarah.johnson@company.com' },
@@ -617,6 +624,33 @@ export class StateService {
 
             return { ...s, chatStream: newStream };
           });
+        } else if (customEvent?.name === 'memory_preloaded') {
+          // Memory preloaded at session start - update state for UI indicator
+          const count = customEvent.value?.count || 0;
+          this.state.update((s) => ({
+            ...s,
+            memoryStatus: { ...s.memoryStatus, preloadedCount: count, lastPreloaded: new Date() }
+          }));
+        } else if (customEvent?.name === 'memory_saved') {
+          // Memory saved after significant action
+          this.state.update((s) => ({
+            ...s,
+            memoryStatus: { ...s.memoryStatus, isSaving: true }
+          }));
+          // Clear after animation
+          setTimeout(() => {
+            this.state.update((s) => ({
+              ...s,
+              memoryStatus: { ...s.memoryStatus, isSaving: false }
+            }));
+          }, 3000);
+        } else if (customEvent?.name === 'memory_scope_active') {
+          // Memory scope active at session start
+          const scope = customEvent.value?.scope || 'user';
+          this.state.update((s) => ({
+            ...s,
+            memoryStatus: { ...s.memoryStatus, activeScope: scope }
+          }));
         }
         break;
 
@@ -728,7 +762,7 @@ export class StateService {
 
       return { ...s, toolCalls: updatedToolCalls, chatStream: updatedChatStream };
     });
-    
+
     // Also clear pending confirmation if it matches
     if (this.pendingConfirmationToolId() === toolCallId) {
       this.pendingConfirmationToolId.set(null);
@@ -1051,27 +1085,42 @@ export class StateService {
       // Handle items based on action
       if (args.items && Array.isArray(args.items)) {
         if (action === 'add') {
-          // ADD: Add new items to PR - trust backend data directly
+          // ADD: Add new items to PR
+          // Try to enrich from history first, fall back to args data
           const newItems = [...updatedPr.items];
           for (const item of args.items) {
             const itemName = item.name;
             const itemQuantity = item.quantity || 1;
 
             if (!newItems.find(i => i.name === itemName)) {
-              // Create product card from args - trust the backend
-              const productCard: ProductCard = {
-                name: itemName,
-                description: item.description || '',
-                vendor: item.vendor || '',
-                price: item.price || 0,
-                image_url: item.image_url || '',
-                source_url: item.source_url || '',
-                specifications: item.specifications || [],
-                sku: item.sku || '',
-                quantity: itemQuantity
-              };
+              // Try to find full product data in history for enrichment
+              const historyProduct = this.findProductInHistory(s, itemName);
+
+              let productCard: ProductCard;
+              if (historyProduct) {
+                // Use enriched data from history
+                productCard = { ...historyProduct, quantity: itemQuantity };
+              } else {
+                // Fall back to args data (trust backend)
+                productCard = {
+                  name: itemName,
+                  description: item.description || '',
+                  vendor: item.vendor || '',
+                  price: item.price || 0,
+                  image_url: item.image_url || '',
+                  source_url: item.source_url || '',
+                  specifications: item.specifications || [],
+                  sku: item.sku || '',
+                  quantity: itemQuantity
+                };
+              }
               newItems.push(productCard);
-              result.details.itemsAffected.push({ name: itemName, action: 'added', quantity: itemQuantity });
+              result.details.itemsAffected.push({
+                name: itemName,
+                action: 'added',
+                quantity: itemQuantity,
+                enrichedFromHistory: !!historyProduct
+              });
             } else {
               result.details.itemsAffected.push({ name: itemName, action: 'already_exists' });
             }
@@ -1091,20 +1140,32 @@ export class StateService {
                 result.details.itemsAffected.push({ name: itemName, action: 'updated', newQuantity: itemQuantity });
               }
             } else {
-              // Item not in PR yet - add it with update action (trust backend)
-              const productCard: ProductCard = {
-                name: itemName,
-                description: item.description || '',
-                vendor: item.vendor || '',
-                price: item.price || 0,
-                image_url: item.image_url || '',
-                source_url: item.source_url || '',
-                specifications: item.specifications || [],
-                sku: item.sku || '',
-                quantity: itemQuantity || 1
-              };
+              // Item not in PR yet - try to enrich from history, then add
+              const historyProduct = this.findProductInHistory(s, itemName);
+
+              let productCard: ProductCard;
+              if (historyProduct) {
+                productCard = { ...historyProduct, quantity: itemQuantity || 1 };
+              } else {
+                productCard = {
+                  name: itemName,
+                  description: item.description || '',
+                  vendor: item.vendor || '',
+                  price: item.price || 0,
+                  image_url: item.image_url || '',
+                  source_url: item.source_url || '',
+                  specifications: item.specifications || [],
+                  sku: item.sku || '',
+                  quantity: itemQuantity || 1
+                };
+              }
               updatedItems.push(productCard);
-              result.details.itemsAffected.push({ name: itemName, action: 'added', quantity: itemQuantity || 1 });
+              result.details.itemsAffected.push({
+                name: itemName,
+                action: 'added',
+                quantity: itemQuantity || 1,
+                enrichedFromHistory: !!historyProduct
+              });
             }
           }
           updatedPr.items = updatedItems;
@@ -1131,33 +1192,50 @@ export class StateService {
       // Handle suppliers based on action
       if (args.suppliers && Array.isArray(args.suppliers)) {
         if (action === 'add') {
-          // ADD: Add new suppliers to PR - trust backend data directly
+          // ADD: Add new suppliers to PR
+          // Try to enrich from history first, fall back to args data
           const newSuppliers = [...updatedPr.suppliers];
           for (const supplier of args.suppliers) {
             // Support both string (supplier name) and object (full supplier data)
             const supplierName = typeof supplier === 'string' ? supplier : supplier.name;
-            
+
             if (!newSuppliers.find(sup => sup.name === supplierName)) {
-              // Create supplier item from args - trust the backend
-              const supplierItem: SupplierItem = typeof supplier === 'object' ? {
-                id: supplier.id || `sup-${Date.now()}`,
-                name: supplier.name,
-                contact: supplier.contact || '',
-                rating: supplier.rating || 0,
-                location: supplier.location || '',
-                status: supplier.status || 'New',
-                website: supplier.website || ''
-              } : {
-                id: `sup-${Date.now()}`,
-                name: supplierName,
-                contact: '',
-                rating: 0,
-                location: '',
-                status: 'New',
-                website: ''
-              };
+              // Try to find full supplier data in history for enrichment
+              const historySupplier = this.findSupplierInHistory(s, supplierName);
+
+              let supplierItem: SupplierItem;
+              if (historySupplier) {
+                // Use enriched data from history
+                supplierItem = historySupplier;
+              } else if (typeof supplier === 'object') {
+                // Use object data from args
+                supplierItem = {
+                  id: supplier.id || `sup-${Date.now()}`,
+                  name: supplier.name,
+                  contact: supplier.contact || '',
+                  rating: supplier.rating || 0,
+                  location: supplier.location || '',
+                  status: supplier.status || 'New',
+                  website: supplier.website || ''
+                };
+              } else {
+                // Minimal data fallback
+                supplierItem = {
+                  id: `sup-${Date.now()}`,
+                  name: supplierName,
+                  contact: '',
+                  rating: 0,
+                  location: '',
+                  status: 'New',
+                  website: ''
+                };
+              }
               newSuppliers.push(supplierItem);
-              result.details.suppliersAffected.push({ name: supplierName, action: 'added' });
+              result.details.suppliersAffected.push({
+                name: supplierName,
+                action: 'added',
+                enrichedFromHistory: !!historySupplier
+              });
             } else {
               result.details.suppliersAffected.push({ name: supplierName, action: 'already_exists' });
             }
@@ -1267,9 +1345,10 @@ export class StateService {
       pre_compliance_agent: 'Pre-Compliance Agent',
       post_compliance_agent: 'Post-Compliance Agent',
       pr_drafter_agent: 'Purchase Requisition Drafting Agent',
-      pr_formatter_agent: 'PR Formatting Agent',
+      pr_formatter_agent: 'Documentation Agent',
       initial_validation_agent:'Initial Validation Agent',
-      
+      submission_agent:'Submission Agent'
+
     };
     return mapping[internalName] || internalName;
   }

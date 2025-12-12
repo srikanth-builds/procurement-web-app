@@ -142,8 +142,27 @@
             }
           </button>
         </div>
-        <div class="mt-2 text-center text-xs text-muted-foreground">
-          AI can make mistakes. Check important info.
+
+        <!-- Memory Indicator and Disclaimer Row -->
+        <div class="mt-2 flex items-center justify-center gap-3 text-xs text-muted-foreground">
+          @if (isMemoryEnabled()) {
+            <div
+              class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 transition-all duration-300"
+              [class.animate-pulse]="memoryStatus().isSaving"
+              [class.bg-primary/10]="memoryStatus().isSaving"
+            >
+              <span class="text-base">🧠</span>
+              @if (memoryStatus().isSaving) {
+                <span class="text-primary font-medium">Learning...</span>
+              } @else if (memoryStatus().preloadedCount) {
+                <span>{{ memoryStatus().preloadedCount }} memories loaded</span>
+              } @else {
+                <span>Memory active</span>
+              }
+            </div>
+            <span class="opacity-50">•</span>
+          }
+          <span>AI can make mistakes. Check important info.</span>
         </div>
       </div>
     </div>
