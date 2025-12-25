@@ -1,4 +1,6 @@
-export const productOptionsTool = {
+import { AgentTool } from 'ngx-ag-ui/core';
+
+export const productOptionsTool: AgentTool = {
   name: 'show_products_to_user',
   description: 'Use this tool to show a list of product options to the user',
   parameters: {
@@ -40,7 +42,7 @@ export const productOptionsTool = {
   },
 };
 
-export const suggestionTool = {
+export const suggestionTool: AgentTool = {
   name: 'show_suggestions',
   description: 'Use this tool to show a list of suggestions to the user to guide their next actions.',
   parameters: {
@@ -55,7 +57,7 @@ export const suggestionTool = {
   },
 };
 
-export const supplierListTool = {
+export const supplierListTool: AgentTool = {
   name: 'supplier_list',
   description: 'Use this tool to show a list of recommended suppliers to the user',
   parameters: {
@@ -86,7 +88,7 @@ export const supplierListTool = {
   },
 };
 
-export const updatePrTool = {
+export const updatePrTool: AgentTool = {
   name: 'update_pr_state',
   description: 'This tool is to update the UI state of the Purchase Requisition (PR) form. Use this to add, update, or remove items/suppliers, or update justification/delivery date based on user request.',
   parameters: {
@@ -121,7 +123,7 @@ export const updatePrTool = {
   },
 };
 
-export const askUserConfirmationTool = {
+export const askUserConfirmationTool: AgentTool = {
   name: 'ask_user_confirmation',
   description: 'Use this tool to ask the user for confirmation before performing a sensitive action or when you need explicit approval. The user can respond with Yes, No, or provide refinement.',
   parameters: {

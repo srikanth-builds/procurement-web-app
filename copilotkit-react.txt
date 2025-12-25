@@ -1,0 +1,1850 @@
+1.Agentic Chat
+
+////
+"use client";
+import React, { useState } from "react";
+import "@copilotkit/react-ui/styles.css";
+import "./style.css";
+import {
+  CopilotKit,
+  useFrontendTool,
+} from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-ui";
+
+interface AgenticChatProps {
+  params: Promise<{
+    integrationId: string;
+  }>;
+}
+
+const AgenticChat: React.FC<AgenticChatProps> = ({ params }) => {
+  const { integrationId } = React.use(params);
+
+  return (
+    <CopilotKit
+      runtimeUrl={`/api/copilotkit/${integrationId}`}
+      showDevConsole={false}
+      // agent lock to the relevant agent
+      agent="agentic_chat"
+    >
+      <Chat />
+    </CopilotKit>
+  );
+};
+
+const Chat = () => {
+  const [background, setBackground] = useState<string>("--copilot-kit-background-color");
+
+  useFrontendTool({
+    name: "change_background",
+    description:
+      "Change the background color of the chat. Can be anything that the CSS background attribute accepts. Regular colors, linear of radial gradients etc.",
+    parameters: [
+      {
+        name: "background",
+        type: "string",
+        description: "The background. Prefer gradients. Only use when asked.",
+      },
+    ],
+    handler: ({ background }) => {
+      setBackground(background);
+      return {
+        status: "success",
+        message: `Background changed to ${background}`,
+      };
+    },
+  });
+
+  return (
+    <div
+      className="flex justify-center items-center h-full w-full"
+      data-testid="background-container"
+      style={{ background }}
+    >
+      <div className="h-full w-full md:w-8/10 md:h-8/10 rounded-lg">
+        <CopilotChat
+          className="h-full rounded-2xl max-w-6xl mx-auto"
+          labels={{ initial: "Hi, I'm an agent. Want to chat?" }}
+          suggestions={[
+            {
+              title: "Change background",
+              message: "Change the background to something new.",
+            },
+            {
+              title: "Generate sonnet",
+              message: "Write a short sonnet about AI.",
+            },
+          ]}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default AgenticChat;
+/////
+
+
+2.Backend Tool Rendering
+"use client";
+import React from "react";
+import "@copilotkit/react-ui/styles.css";
+import "./style.css";
+import { CopilotKit, useCopilotAction } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-ui";
+
+interface AgenticChatProps {
+  params: Promise<{
+    integrationId: string;
+  }>;
+}
+
+const AgenticChat: React.FC<AgenticChatProps> = ({ params }) => {
+  const { integrationId } = React.use(params);
+
+  return (
+    <CopilotKit
+      runtimeUrl={`/api/copilotkit/${integrationId}`}
+      showDevConsole={false}
+      agent="backend_tool_rendering"
+    >
+      <Chat />
+    </CopilotKit>
+  );
+};
+
+const Chat = () => {
+  useCopilotAction({
+    name: "get_weather",
+    available: "disabled",
+    parameters: [{ name: "location", type: "string", required: true }],
+    render: ({ args, result, status }) => {
+      if (status !== "complete") {
+        return (
+          <div className=" bg-[#667eea] text-white p-4 rounded-lg max-w-md">
+            <span className="animate-spin">⚙️ Retrieving weather...</span>
+          </div>
+        );
+      }
+
+      const weatherResult: WeatherToolResult = {
+        temperature: result?.temperature || 0,
+        conditions: result?.conditions || "clear",
+        humidity: result?.humidity || 0,
+        windSpeed: result?.wind_speed || 0,
+        feelsLike: result?.feels_like || result?.temperature || 0,
+      };
+
+      const themeColor = getThemeColor(weatherResult.conditions);
+
+      return (
+        <WeatherCard
+          location={args.location}
+          themeColor={themeColor}
+          result={weatherResult}
+          status={status || "complete"}
+        />
+      );
+    },
+  });
+
+  return (
+    <div className="flex justify-center items-center h-full w-full">
+      <div className="h-full w-full md:w-8/10 md:h-8/10 rounded-lg">
+        <CopilotChat
+          className="h-full rounded-2xl max-w-6xl mx-auto"
+          labels={{ initial: "Hi! I can look up the weather for you. Just ask!" }}
+          suggestions={[
+            {
+              title: "Weather in San Francisco",
+              message: "What's the weather like in San Francisco?",
+            },
+            {
+              title: "Weather in New York",
+              message: "Tell me about the weather in New York.",
+            },
+            {
+              title: "Weather in Tokyo",
+              message: "How's the weather in Tokyo today?",
+            },
+          ]}
+        />
+      </div>
+    </div>
+  );
+};
+
+interface WeatherToolResult {
+  temperature: number;
+  conditions: string;
+  humidity: number;
+  windSpeed: number;
+  feelsLike: number;
+}
+
+function getThemeColor(conditions: string): string {
+  const conditionLower = conditions.toLowerCase();
+  if (conditionLower.includes("clear") || conditionLower.includes("sunny")) {
+    return "#667eea";
+  }
+  if (conditionLower.includes("rain") || conditionLower.includes("storm")) {
+    return "#4A5568";
+  }
+  if (conditionLower.includes("cloud")) {
+    return "#718096";
+  }
+  if (conditionLower.includes("snow")) {
+    return "#63B3ED";
+  }
+  return "#764ba2";
+}
+
+function WeatherCard({
+  location,
+  themeColor,
+  result,
+  status,
+}: {
+  location?: string;
+  themeColor: string;
+  result: WeatherToolResult;
+  status: "inProgress" | "executing" | "complete";
+}) {
+  return (
+    <div
+      data-testid="weather-card"
+      style={{ backgroundColor: themeColor }}
+      className="rounded-xl mt-6 mb-4 max-w-md w-full"
+    >
+      <div className="bg-white/20 p-4 w-full">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 data-testid="weather-city" className="text-xl font-bold text-white capitalize">
+              {location}
+            </h3>
+            <p className="text-white">Current Weather</p>
+          </div>
+          <WeatherIcon conditions={result.conditions} />
+        </div>
+
+        <div className="mt-4 flex items-end justify-between">
+          <div className="text-3xl font-bold text-white">
+            <span className="">{result.temperature}° C</span>
+            <span className="text-sm text-white/50">
+              {" / "}
+              {((result.temperature * 9) / 5 + 32).toFixed(1)}° F
+            </span>
+          </div>
+          <div className="text-sm text-white capitalize">{result.conditions}</div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-white">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div data-testid="weather-humidity">
+              <p className="text-white text-xs">Humidity</p>
+              <p className="text-white font-medium">{result.humidity}%</p>
+            </div>
+            <div data-testid="weather-wind">
+              <p className="text-white text-xs">Wind</p>
+              <p className="text-white font-medium">{result.windSpeed} mph</p>
+            </div>
+            <div data-testid="weather-feels-like">
+              <p className="text-white text-xs">Feels Like</p>
+              <p className="text-white font-medium">{result.feelsLike}°</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WeatherIcon({ conditions }: { conditions: string }) {
+  if (!conditions) return null;
+
+  if (conditions.toLowerCase().includes("clear") || conditions.toLowerCase().includes("sunny")) {
+    return <SunIcon />;
+  }
+
+  if (
+    conditions.toLowerCase().includes("rain") ||
+    conditions.toLowerCase().includes("drizzle") ||
+    conditions.toLowerCase().includes("snow") ||
+    conditions.toLowerCase().includes("thunderstorm")
+  ) {
+    return <RainIcon />;
+  }
+
+  if (
+    conditions.toLowerCase().includes("fog") ||
+    conditions.toLowerCase().includes("cloud") ||
+    conditions.toLowerCase().includes("overcast")
+  ) {
+    return <CloudIcon />;
+  }
+
+  return <CloudIcon />;
+}
+
+// Simple sun icon for the weather card
+function SunIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-14 h-14 text-yellow-200"
+    >
+      <circle cx="12" cy="12" r="5" />
+      <path
+        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+        strokeWidth="2"
+        stroke="currentColor"
+      />
+    </svg>
+  );
+}
+
+function RainIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-14 h-14 text-blue-200"
+    >
+      {/* Cloud */}
+      <path
+        d="M7 15a4 4 0 0 1 0-8 5 5 0 0 1 10 0 4 4 0 0 1 0 8H7z"
+        fill="currentColor"
+        opacity="0.8"
+      />
+      {/* Rain drops */}
+      <path
+        d="M8 18l2 4M12 18l2 4M16 18l2 4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+function CloudIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-14 h-14 text-gray-200"
+    >
+      <path d="M7 15a4 4 0 0 1 0-8 5 5 0 0 1 10 0 4 4 0 0 1 0 8H7z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export default AgenticChat;
+
+3. Human in the loop
+"use client";
+import React, { useState, useEffect } from "react";
+import "@copilotkit/react-ui/styles.css";
+import "./style.css";
+import {
+  CopilotKit,
+  useHumanInTheLoop,
+  useLangGraphInterrupt,
+} from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-ui";
+import { useTheme } from "next-themes";
+
+interface HumanInTheLoopProps {
+  params: Promise<{
+    integrationId: string;
+  }>;
+}
+
+const HumanInTheLoop: React.FC<HumanInTheLoopProps> = ({ params }) => {
+  const { integrationId } = React.use(params);
+
+  return (
+    <CopilotKit
+      runtimeUrl={`/api/copilotkit/${integrationId}`}
+      showDevConsole={false}
+      // agent lock to the relevant agent
+      agent="human_in_the_loop"
+    >
+      <Chat integrationId={integrationId} />
+    </CopilotKit>
+  );
+};
+
+interface Step {
+  description: string;
+  status: "disabled" | "enabled" | "executing";
+}
+
+// Shared UI Components
+const StepContainer = ({ theme, children }: { theme?: string; children: React.ReactNode }) => (
+  <div data-testid="select-steps" className="flex">
+    <div
+      className={`relative rounded-xl w-[600px] p-6 shadow-lg backdrop-blur-sm ${
+        theme === "dark"
+          ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border border-slate-700/50 shadow-2xl"
+          : "bg-gradient-to-br from-white via-gray-50 to-white text-gray-800 border border-gray-200/80"
+      }`}
+    >
+      {children}
+    </div>
+  </div>
+);
+
+const StepHeader = ({
+  theme,
+  enabledCount,
+  totalCount,
+  status,
+  showStatus = false,
+}: {
+  theme?: string;
+  enabledCount: number;
+  totalCount: number;
+  status?: string;
+  showStatus?: boolean;
+}) => (
+  <div className="mb-5">
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        Select Steps
+      </h2>
+      <div className="flex items-center gap-3">
+        <div className={`text-sm ${theme === "dark" ? "text-slate-400" : "text-gray-500"}`}>
+          {enabledCount}/{totalCount} Selected
+        </div>
+        {showStatus && (
+          <div
+            className={`text-xs px-2 py-1 rounded-full font-medium ${
+              status === "executing"
+                ? theme === "dark"
+                  ? "bg-blue-900/30 text-blue-300 border border-blue-500/30"
+                  : "bg-blue-50 text-blue-600 border border-blue-200"
+                : theme === "dark"
+                  ? "bg-slate-700 text-slate-300"
+                  : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {status === "executing" ? "Ready" : "Waiting"}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div
+      className={`relative h-2 rounded-full overflow-hidden ${theme === "dark" ? "bg-slate-700" : "bg-gray-200"}`}
+    >
+      <div
+        className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+        style={{ width: `${totalCount > 0 ? (enabledCount / totalCount) * 100 : 0}%` }}
+      />
+    </div>
+  </div>
+);
+
+const StepItem = ({
+  step,
+  theme,
+  status,
+  onToggle,
+  disabled = false,
+}: {
+  step: { description: string; status: string };
+  theme?: string;
+  status?: string;
+  onToggle: () => void;
+  disabled?: boolean;
+}) => (
+  <div
+    className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
+      step.status === "enabled"
+        ? theme === "dark"
+          ? "bg-gradient-to-r from-blue-900/20 to-purple-900/10 border border-blue-500/30"
+          : "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200/60"
+        : theme === "dark"
+          ? "bg-slate-800/30 border border-slate-600/30"
+          : "bg-gray-50/50 border border-gray-200/40"
+    }`}
+  >
+    <label data-testid="step-item" className="flex items-center cursor-pointer w-full">
+      <div className="relative">
+        <input
+          type="checkbox"
+          checked={step.status === "enabled"}
+          onChange={onToggle}
+          className="sr-only"
+          disabled={disabled}
+        />
+        <div
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+            step.status === "enabled"
+              ? "bg-gradient-to-br from-blue-500 to-purple-600 border-blue-500"
+              : theme === "dark"
+                ? "border-slate-400 bg-slate-700"
+                : "border-gray-300 bg-white"
+          } ${disabled ? "opacity-60" : ""}`}
+        >
+          {step.status === "enabled" && (
+            <svg
+              className="w-3 h-3 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={3}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          )}
+        </div>
+      </div>
+      <span
+        data-testid="step-text"
+        className={`ml-3 font-medium transition-all duration-300 ${
+          step.status !== "enabled" && status != "inProgress"
+            ? `line-through ${theme === "dark" ? "text-slate-500" : "text-gray-400"}`
+            : theme === "dark"
+              ? "text-white"
+              : "text-gray-800"
+        } ${disabled ? "opacity-60" : ""}`}
+      >
+        {step.description}
+      </span>
+    </label>
+  </div>
+);
+
+const ActionButton = ({
+  variant,
+  theme,
+  disabled,
+  onClick,
+  children,
+}: {
+  variant: "primary" | "secondary" | "success" | "danger";
+  theme?: string;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) => {
+  const baseClasses = "px-6 py-3 rounded-lg font-semibold transition-all duration-200";
+  const enabledClasses = "hover:scale-105 shadow-md hover:shadow-lg";
+  const disabledClasses = "opacity-50 cursor-not-allowed";
+
+  const variantClasses = {
+    primary:
+      "bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 text-white shadow-lg hover:shadow-xl",
+    secondary:
+      theme === "dark"
+        ? "bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 hover:border-slate-500"
+        : "bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 hover:border-gray-400",
+    success:
+      "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl",
+    danger:
+      "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl",
+  };
+
+  return (
+    <button
+      className={`${baseClasses} ${disabled ? disabledClasses : enabledClasses} ${
+        disabled && variant === "secondary"
+          ? "bg-gray-200 text-gray-500"
+          : disabled && variant === "success"
+            ? "bg-gray-400"
+            : variantClasses[variant]
+      }`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+};
+
+const DecorativeElements = ({
+  theme,
+  variant = "default",
+}: {
+  theme?: string;
+  variant?: "default" | "success" | "danger";
+}) => (
+  <>
+    <div
+      className={`absolute top-3 right-3 w-16 h-16 rounded-full blur-xl ${
+        variant === "success"
+          ? theme === "dark"
+            ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10"
+            : "bg-gradient-to-br from-green-200/30 to-emerald-200/30"
+          : variant === "danger"
+            ? theme === "dark"
+              ? "bg-gradient-to-br from-red-500/10 to-pink-500/10"
+              : "bg-gradient-to-br from-red-200/30 to-pink-200/30"
+            : theme === "dark"
+              ? "bg-gradient-to-br from-blue-500/10 to-purple-500/10"
+              : "bg-gradient-to-br from-blue-200/30 to-purple-200/30"
+      }`}
+    />
+    <div
+      className={`absolute bottom-3 left-3 w-12 h-12 rounded-full blur-xl ${
+        variant === "default"
+          ? theme === "dark"
+            ? "bg-gradient-to-br from-purple-500/10 to-pink-500/10"
+            : "bg-gradient-to-br from-purple-200/30 to-pink-200/30"
+          : "opacity-50"
+      }`}
+    />
+  </>
+);
+const InterruptHumanInTheLoop: React.FC<{
+  event: { value: { steps: Step[] } };
+  resolve: (value: string) => void;
+}> = ({ event, resolve }) => {
+  const { theme } = useTheme();
+
+  // Parse and initialize steps data
+  let initialSteps: Step[] = [];
+  if (event.value && event.value.steps && Array.isArray(event.value.steps)) {
+    initialSteps = event.value.steps.map((step: any) => ({
+      description: typeof step === "string" ? step : step.description || "",
+      status: typeof step === "object" && step.status ? step.status : "enabled",
+    }));
+  }
+
+  const [localSteps, setLocalSteps] = useState<Step[]>(initialSteps);
+  const enabledCount = localSteps.filter((step) => step.status === "enabled").length;
+
+  const handleStepToggle = (index: number) => {
+    setLocalSteps((prevSteps) =>
+      prevSteps.map((step, i) =>
+        i === index
+          ? { ...step, status: step.status === "enabled" ? "disabled" : "enabled" }
+          : step,
+      ),
+    );
+  };
+
+  const handlePerformSteps = () => {
+    const selectedSteps = localSteps
+      .filter((step) => step.status === "enabled")
+      .map((step) => step.description);
+    resolve("The user selected the following steps: " + selectedSteps.join(", "));
+  };
+
+  return (
+    <StepContainer theme={theme}>
+      <StepHeader theme={theme} enabledCount={enabledCount} totalCount={localSteps.length} />
+
+      <div className="space-y-3 mb-6">
+        {localSteps.map((step, index) => (
+          <StepItem
+            key={index}
+            step={step}
+            theme={theme}
+            onToggle={() => handleStepToggle(index)}
+          />
+        ))}
+      </div>
+
+      <div className="flex justify-center">
+        <ActionButton variant="primary" theme={theme} onClick={handlePerformSteps}>
+          <span className="text-lg">✨</span>
+          Perform Steps
+          <span
+            className={`ml-1 px-2 py-1 rounded-full text-xs font-bold ${
+              theme === "dark" ? "bg-purple-800/50" : "bg-purple-600/20"
+            }`}
+          >
+            {enabledCount}
+          </span>
+        </ActionButton>
+      </div>
+
+      <DecorativeElements theme={theme} />
+    </StepContainer>
+  );
+};
+
+const Chat = ({ integrationId }: { integrationId: string }) => {
+  // Langgraph uses it's own hook to handle human-in-the-loop interactions via langgraph interrupts,
+  // This hook won't do anything for other integrations.
+  useLangGraphInterrupt({
+    render: ({ event, resolve }) => <InterruptHumanInTheLoop event={event} resolve={resolve} />,
+  });
+  useHumanInTheLoop({
+    name: "generate_task_steps",
+    description: "Generates a list of steps for the user to perform",
+    parameters: [
+      {
+        name: "steps",
+        type: "object[]",
+        attributes: [
+          {
+            name: "description",
+            type: "string",
+          },
+          {
+            name: "status",
+            type: "string",
+            enum: ["enabled", "disabled", "executing"],
+          },
+        ],
+      },
+    ],
+    // Langgraph uses it's own hook to handle human-in-the-loop interactions via langgraph interrupts,
+    // so don't use this action for langgraph integration.
+    available: ["langgraph", "langgraph-fastapi", "langgraph-typescript"].includes(integrationId)
+      ? "disabled"
+      : "enabled",
+    render: ({ args, respond, status }) => {
+      return <StepsFeedback args={args} respond={respond} status={status} />;
+    },
+  });
+
+  return (
+    <div className="flex justify-center items-center h-full w-full">
+      <div className="h-full w-full md:w-8/10 md:h-8/10 rounded-lg">
+        <CopilotChat
+          suggestions={[
+            { title: "Simple plan", message: "Please plan a trip to mars in 5 steps." },
+            { title: "Complex plan", message: "Please plan a pastra dish in 10 steps." },
+          ]}
+          className="h-full rounded-2xl max-w-6xl mx-auto"
+          labels={{
+            initial:
+              "Hi, I'm an agent specialized in helping you with your tasks. How can I help you?",
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const StepsFeedback = ({ args, respond, status }: { args: any; respond: any; status: any }) => {
+  const { theme } = useTheme();
+  const [localSteps, setLocalSteps] = useState<Step[]>([]);
+  const [accepted, setAccepted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (status === "executing" && localSteps.length === 0) {
+      setLocalSteps(args.steps);
+    }
+  }, [status, args.steps, localSteps]);
+
+  if (args.steps === undefined || args.steps.length === 0) {
+    return <></>;
+  }
+
+  const steps = localSteps.length > 0 ? localSteps : args.steps;
+  const enabledCount = steps.filter((step: any) => step.status === "enabled").length;
+
+  const handleStepToggle = (index: number) => {
+    setLocalSteps((prevSteps) =>
+      prevSteps.map((step, i) =>
+        i === index
+          ? { ...step, status: step.status === "enabled" ? "disabled" : "enabled" }
+          : step,
+      ),
+    );
+  };
+
+  const handleReject = () => {
+    if (respond) {
+      setAccepted(false);
+      respond({ accepted: false });
+    }
+  };
+
+  const handleConfirm = () => {
+    if (respond) {
+      setAccepted(true);
+      respond({ accepted: true, steps: localSteps.filter((step) => step.status === "enabled") });
+    }
+  };
+
+  return (
+    <StepContainer theme={theme}>
+      <StepHeader
+        theme={theme}
+        enabledCount={enabledCount}
+        totalCount={steps.length}
+        status={status}
+        showStatus={true}
+      />
+
+      <div className="space-y-3 mb-6">
+        {steps.map((step: any, index: any) => (
+          <StepItem
+            key={index}
+            step={step}
+            theme={theme}
+            status={status}
+            onToggle={() => handleStepToggle(index)}
+            disabled={status !== "executing"}
+          />
+        ))}
+      </div>
+
+      {/* Action Buttons - Different logic from InterruptHumanInTheLoop */}
+      {accepted === null && (
+        <div className="flex justify-center gap-4">
+          <ActionButton
+            variant="secondary"
+            theme={theme}
+            disabled={status !== "executing"}
+            onClick={handleReject}
+          >
+            <span className="mr-2">✗</span>
+            Reject
+          </ActionButton>
+          <ActionButton
+            variant="success"
+            theme={theme}
+            disabled={status !== "executing"}
+            onClick={handleConfirm}
+          >
+            <span className="mr-2">✓</span>
+            Confirm
+            <span
+              className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
+                theme === "dark" ? "bg-green-800/50" : "bg-green-600/20"
+              }`}
+            >
+              {enabledCount}
+            </span>
+          </ActionButton>
+        </div>
+      )}
+
+      {/* Result State - Unique to StepsFeedback */}
+      {accepted !== null && (
+        <div className="flex justify-center">
+          <div
+            className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${
+              accepted
+                ? theme === "dark"
+                  ? "bg-green-900/30 text-green-300 border border-green-500/30"
+                  : "bg-green-50 text-green-700 border border-green-200"
+                : theme === "dark"
+                  ? "bg-red-900/30 text-red-300 border border-red-500/30"
+                  : "bg-red-50 text-red-700 border border-red-200"
+            }`}
+          >
+            <span className="text-lg">{accepted ? "✓" : "✗"}</span>
+            {accepted ? "Accepted" : "Rejected"}
+          </div>
+        </div>
+      )}
+
+      <DecorativeElements
+        theme={theme}
+        variant={accepted === true ? "success" : accepted === false ? "danger" : "default"}
+      />
+    </StepContainer>
+  );
+};
+
+export default HumanInTheLoop;
+
+
+4.tool based generative UI
+"use client";
+import React, { useState } from "react";
+import "@copilotkit/react-ui/styles.css";
+import { CopilotKit, useCopilotAction } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-ui";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { useURLParams } from "@/contexts/url-params-context";
+
+interface ToolBasedGenerativeUIProps {
+  params: Promise<{
+    integrationId: string;
+  }>;
+}
+
+interface Haiku {
+  japanese: string[];
+  english: string[];
+  image_name: string | null;
+  gradient: string;
+}
+
+export default function ToolBasedGenerativeUI({ params }: ToolBasedGenerativeUIProps) {
+  const { integrationId } = React.use(params);
+  const { chatDefaultOpen } = useURLParams();
+
+  const chatProps = {
+    defaultOpen: chatDefaultOpen,
+    labels: {
+      title: "Haiku Generator",
+      initial: "I'm a haiku generator 👋. How can I help you?",
+    },
+    clickOutsideToClose: false,
+    suggestions: [
+      { title: "Nature Haiku", message: "Write me a haiku about nature." },
+      { title: "Ocean Haiku", message: "Create a haiku about the ocean." },
+      { title: "Spring Haiku", message: "Generate a haiku about spring." },
+    ],
+  };
+
+  return (
+    <CopilotKit
+      runtimeUrl={`/api/copilotkit/${integrationId}`}
+      showDevConsole={false}
+      agent="tool_based_generative_ui"
+    >
+      <CopilotSidebar {...chatProps} />
+      <HaikuDisplay />
+    </CopilotKit>
+  );
+}
+
+const VALID_IMAGE_NAMES = [
+  "Osaka_Castle_Turret_Stone_Wall_Pine_Trees_Daytime.jpg",
+  "Tokyo_Skyline_Night_Tokyo_Tower_Mount_Fuji_View.jpg",
+  "Itsukushima_Shrine_Miyajima_Floating_Torii_Gate_Sunset_Long_Exposure.jpg",
+  "Takachiho_Gorge_Waterfall_River_Lush_Greenery_Japan.jpg",
+  "Bonsai_Tree_Potted_Japanese_Art_Green_Foliage.jpeg",
+  "Shirakawa-go_Gassho-zukuri_Thatched_Roof_Village_Aerial_View.jpg",
+  "Ginkaku-ji_Silver_Pavilion_Kyoto_Japanese_Garden_Pond_Reflection.jpg",
+  "Senso-ji_Temple_Asakusa_Cherry_Blossoms_Kimono_Umbrella.jpg",
+  "Cherry_Blossoms_Sakura_Night_View_City_Lights_Japan.jpg",
+  "Mount_Fuji_Lake_Reflection_Cherry_Blossoms_Sakura_Spring.jpg",
+];
+
+function HaikuDisplay() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [haikus, setHaikus] = useState<Haiku[]>([
+    {
+      japanese: ["仮の句よ", "まっさらながら", "花を呼ぶ"],
+      english: ["A placeholder verse—", "even in a blank canvas,", "it beckons flowers."],
+      image_name: null,
+      gradient: "",
+    },
+  ]);
+
+  useCopilotAction(
+    {
+      name: "generate_haiku",
+      parameters: [
+        {
+          name: "japanese",
+          type: "string[]",
+          required: true,
+          description: "3 lines of haiku in Japanese",
+        },
+        {
+          name: "english",
+          type: "string[]",
+          required: true,
+          description: "3 lines of haiku translated to English",
+        },
+        {
+          name: "image_name",
+          type: "string",
+          required: true,
+          description: `One relevant image name from: ${VALID_IMAGE_NAMES.join(", ")}`,
+        },
+        {
+          name: "gradient",
+          type: "string",
+          required: true,
+          description: "CSS Gradient color for the background",
+        },
+      ],
+      followUp: false,
+      handler: async ({ japanese, english, image_name, gradient }) => {
+        const newHaiku: Haiku = {
+          japanese: japanese || [],
+          english: english || [],
+          image_name: image_name || null,
+          gradient: gradient || "",
+        };
+        setHaikus((prev) => [
+          newHaiku,
+          ...prev.filter((h) => h.english[0] !== "A placeholder verse—"),
+        ]);
+        setActiveIndex(0);
+        return "Haiku generated!";
+      },
+      render: ({ args }) => {
+        if (!args.japanese) return <></>;
+        return <HaikuCard haiku={args as Haiku} />;
+      },
+    },
+    [haikus],
+  );
+
+  const currentHaiku = haikus[activeIndex];
+
+  return (
+    <div className="relative flex items-center justify-center h-full w-full">
+      <div className="px-20 py-12 w-full max-w-4xl">
+        <Carousel className="w-full" data-testid="haiku-carousel">
+          <CarouselContent>
+            {haikus.map((haiku, index) => (
+              <CarouselItem key={index} data-testid={`carousel-item-${index}`}>
+                <HaikuCard haiku={haiku} />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          {haikus.length > 1 && (
+            <>
+              <CarouselPrevious />
+              <CarouselNext />
+            </>
+          )}
+        </Carousel>
+      </div>
+    </div>
+  );
+}
+
+function HaikuCard({ haiku }: { haiku: Partial<Haiku> }) {
+  return (
+    <div
+      data-testid="haiku-card"
+      style={{ background: haiku.gradient }}
+      className="relative bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-2xl my-6 p-8 max-w-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+    >
+      {/* Decorative background elements */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl -z-0" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-400/10 to-pink-400/10 rounded-full blur-3xl -z-0" />
+
+      {/* Haiku Text */}
+      <div className="relative z-10 flex flex-col items-center space-y-6">
+        {haiku.japanese?.map((line, index) => (
+          <div
+            key={index}
+            className="flex flex-col items-center text-center space-y-2 animate-in fade-in slide-in-from-bottom-4"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
+            <p
+              data-testid="haiku-japanese-line"
+              className="font-serif font-bold text-4xl md:text-5xl bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent tracking-wide"
+            >
+              {line}
+            </p>
+            <p
+              data-testid="haiku-english-line"
+              className="font-light text-base md:text-lg text-slate-600 dark:text-slate-400 italic max-w-md"
+            >
+              {haiku.english?.[index]}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Image */}
+      {haiku.image_name && (
+        <div className="relative z-10 mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
+          <div className="relative group overflow-hidden rounded-2xl shadow-xl">
+            <img
+              data-testid="haiku-image"
+              src={`/images/${haiku.image_name}`}
+              alt={haiku.image_name}
+              className="object-cover w-full h-64 md:h-80 transform transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// shared state between agent and ui
+"use client";
+import { CopilotKit, useCoAgent, useCopilotChat } from "@copilotkit/react-core";
+import { CopilotChat, CopilotSidebar } from "@copilotkit/react-ui";
+import React, { useState, useEffect, useRef } from "react";
+import { Role, TextMessage } from "@copilotkit/runtime-client-gql";
+import "@copilotkit/react-ui/styles.css";
+import "./style.css";
+import { useMobileView } from "@/utils/use-mobile-view";
+import { useMobileChat } from "@/utils/use-mobile-chat";
+import { useURLParams } from "@/contexts/url-params-context";
+
+interface SharedStateProps {
+  params: Promise<{
+    integrationId: string;
+  }>;
+}
+
+export default function SharedState({ params }: SharedStateProps) {
+  const { integrationId } = React.use(params);
+  const { isMobile } = useMobileView();
+  const { chatDefaultOpen } = useURLParams();
+  const defaultChatHeight = 50;
+  const { isChatOpen, setChatHeight, setIsChatOpen, isDragging, chatHeight, handleDragStart } =
+    useMobileChat(defaultChatHeight);
+
+  const chatTitle = "AI Recipe Assistant";
+  const chatDescription = "Ask me to craft recipes";
+  const initialLabel = "Hi 👋 How can I help with your recipe?";
+
+  return (
+    <CopilotKit
+      runtimeUrl={`/api/copilotkit/${integrationId}`}
+      showDevConsole={false}
+      // agent lock to the relevant agent
+      agent="shared_state"
+    >
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <Recipe />
+        {isMobile ? (
+          <>
+            {/* Chat Toggle Button */}
+            <div className="fixed bottom-0 left-0 right-0 z-50">
+              <div className="bg-gradient-to-t from-white via-white to-transparent h-6"></div>
+              <div
+                className="bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between cursor-pointer shadow-lg"
+                onClick={() => {
+                  if (!isChatOpen) {
+                    setChatHeight(defaultChatHeight); // Reset to good default when opening
+                  }
+                  setIsChatOpen(!isChatOpen);
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div>
+                    <div className="font-medium text-gray-900">{chatTitle}</div>
+                    <div className="text-sm text-gray-500">{chatDescription}</div>
+                  </div>
+                </div>
+                <div
+                  className={`transform transition-transform duration-300 ${isChatOpen ? "rotate-180" : ""}`}
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 15l7-7 7 7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Pull-Up Chat Container */}
+            <div
+              className={`fixed inset-x-0 bottom-0 z-40 bg-white rounded-t-2xl shadow-[0px_0px_20px_0px_rgba(0,0,0,0.15)] transform transition-all duration-300 ease-in-out flex flex-col ${
+                isChatOpen ? "translate-y-0" : "translate-y-full"
+              } ${isDragging ? "transition-none" : ""}`}
+              style={{
+                height: `${chatHeight}vh`,
+                paddingBottom: "env(safe-area-inset-bottom)", // Handle iPhone bottom padding
+              }}
+            >
+              {/* Drag Handle Bar */}
+              <div
+                className="flex justify-center pt-3 pb-2 flex-shrink-0 cursor-grab active:cursor-grabbing"
+                onMouseDown={handleDragStart}
+              >
+                <div className="w-12 h-1 bg-gray-400 rounded-full hover:bg-gray-500 transition-colors"></div>
+              </div>
+
+              {/* Chat Header */}
+              <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-gray-900">{chatTitle}</h3>
+                  </div>
+                  <button
+                    onClick={() => setIsChatOpen(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <svg
+                      className="w-5 h-5 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Chat Content - Flexible container for messages and input */}
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-16">
+                <CopilotChat
+                  className="h-full flex flex-col"
+                  labels={{
+                    initial: initialLabel,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Backdrop */}
+            {isChatOpen && (
+              <div className="fixed inset-0 z-30" onClick={() => setIsChatOpen(false)} />
+            )}
+          </>
+        ) : (
+          <CopilotSidebar
+            defaultOpen={chatDefaultOpen}
+            labels={{
+              title: chatTitle,
+              initial: initialLabel,
+            }}
+            clickOutsideToClose={false}
+          />
+        )}
+      </div>
+    </CopilotKit>
+  );
+}
+
+enum SkillLevel {
+  BEGINNER = "Beginner",
+  INTERMEDIATE = "Intermediate",
+  ADVANCED = "Advanced",
+}
+
+enum CookingTime {
+  FiveMin = "5 min",
+  FifteenMin = "15 min",
+  ThirtyMin = "30 min",
+  FortyFiveMin = "45 min",
+  SixtyPlusMin = "60+ min",
+}
+
+const cookingTimeValues = [
+  { label: CookingTime.FiveMin, value: 0 },
+  { label: CookingTime.FifteenMin, value: 1 },
+  { label: CookingTime.ThirtyMin, value: 2 },
+  { label: CookingTime.FortyFiveMin, value: 3 },
+  { label: CookingTime.SixtyPlusMin, value: 4 },
+];
+
+enum SpecialPreferences {
+  HighProtein = "High Protein",
+  LowCarb = "Low Carb",
+  Spicy = "Spicy",
+  BudgetFriendly = "Budget-Friendly",
+  OnePotMeal = "One-Pot Meal",
+  Vegetarian = "Vegetarian",
+  Vegan = "Vegan",
+}
+
+interface Ingredient {
+  icon: string;
+  name: string;
+  amount: string;
+}
+
+interface Recipe {
+  title: string;
+  skill_level: SkillLevel;
+  cooking_time: CookingTime;
+  special_preferences: string[];
+  ingredients: Ingredient[];
+  instructions: string[];
+}
+
+interface RecipeAgentState {
+  recipe: Recipe;
+}
+
+const INITIAL_STATE: RecipeAgentState = {
+  recipe: {
+    title: "Make Your Recipe",
+    skill_level: SkillLevel.INTERMEDIATE,
+    cooking_time: CookingTime.FortyFiveMin,
+    special_preferences: [],
+    ingredients: [
+      { icon: "🥕", name: "Carrots", amount: "3 large, grated" },
+      { icon: "🌾", name: "All-Purpose Flour", amount: "2 cups" },
+    ],
+    instructions: ["Preheat oven to 350°F (175°C)"],
+  },
+};
+
+function Recipe() {
+  const { isMobile } = useMobileView();
+  const { state: agentState, setState: setAgentState } = useCoAgent<RecipeAgentState>({
+    name: "shared_state",
+    initialState: INITIAL_STATE,
+  });
+
+  const [recipe, setRecipe] = useState(INITIAL_STATE.recipe);
+  const { appendMessage, isLoading } = useCopilotChat();
+  const [editingInstructionIndex, setEditingInstructionIndex] = useState<number | null>(null);
+  const newInstructionRef = useRef<HTMLTextAreaElement>(null);
+
+  const updateRecipe = (partialRecipe: Partial<Recipe>) => {
+    setAgentState({
+      ...agentState,
+      recipe: {
+        ...recipe,
+        ...partialRecipe,
+      },
+    });
+    setRecipe({
+      ...recipe,
+      ...partialRecipe,
+    });
+  };
+
+  const newRecipeState = { ...recipe };
+  const newChangedKeys = [];
+  const changedKeysRef = useRef<string[]>([]);
+
+  for (const key in recipe) {
+    if (
+      agentState &&
+      agentState.recipe &&
+      (agentState.recipe as any)[key] !== undefined &&
+      (agentState.recipe as any)[key] !== null
+    ) {
+      let agentValue = (agentState.recipe as any)[key];
+      const recipeValue = (recipe as any)[key];
+
+      // Check if agentValue is a string and replace \n with actual newlines
+      if (typeof agentValue === "string") {
+        agentValue = agentValue.replace(/\\n/g, "\n");
+      }
+
+      if (JSON.stringify(agentValue) !== JSON.stringify(recipeValue)) {
+        (newRecipeState as any)[key] = agentValue;
+        newChangedKeys.push(key);
+      }
+    }
+  }
+
+  if (newChangedKeys.length > 0) {
+    changedKeysRef.current = newChangedKeys;
+  } else if (!isLoading) {
+    changedKeysRef.current = [];
+  }
+
+  useEffect(() => {
+    setRecipe(newRecipeState);
+  }, [JSON.stringify(newRecipeState)]);
+
+  const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    updateRecipe({
+      title: event.target.value,
+    });
+  };
+
+  const handleSkillLevelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    updateRecipe({
+      skill_level: event.target.value as SkillLevel,
+    });
+  };
+
+  const handleDietaryChange = (preference: string, checked: boolean) => {
+    if (checked) {
+      updateRecipe({
+        special_preferences: [...recipe.special_preferences, preference],
+      });
+    } else {
+      updateRecipe({
+        special_preferences: recipe.special_preferences.filter((p) => p !== preference),
+      });
+    }
+  };
+
+  const handleCookingTimeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    updateRecipe({
+      cooking_time: cookingTimeValues[Number(event.target.value)].label,
+    });
+  };
+
+  const addIngredient = () => {
+    // Pick a random food emoji from our valid list
+    updateRecipe({
+      ingredients: [...recipe.ingredients, { icon: "🍴", name: "", amount: "" }],
+    });
+  };
+
+  const updateIngredient = (index: number, field: keyof Ingredient, value: string) => {
+    const updatedIngredients = [...recipe.ingredients];
+    updatedIngredients[index] = {
+      ...updatedIngredients[index],
+      [field]: value,
+    };
+    updateRecipe({ ingredients: updatedIngredients });
+  };
+
+  const removeIngredient = (index: number) => {
+    const updatedIngredients = [...recipe.ingredients];
+    updatedIngredients.splice(index, 1);
+    updateRecipe({ ingredients: updatedIngredients });
+  };
+
+  const addInstruction = () => {
+    const newIndex = recipe.instructions.length;
+    updateRecipe({
+      instructions: [...recipe.instructions, ""],
+    });
+    // Set the new instruction as the editing one
+    setEditingInstructionIndex(newIndex);
+
+    // Focus the new instruction after render
+    setTimeout(() => {
+      const textareas = document.querySelectorAll(".instructions-container textarea");
+      const newTextarea = textareas[textareas.length - 1] as HTMLTextAreaElement;
+      if (newTextarea) {
+        newTextarea.focus();
+      }
+    }, 50);
+  };
+
+  const updateInstruction = (index: number, value: string) => {
+    const updatedInstructions = [...recipe.instructions];
+    updatedInstructions[index] = value;
+    updateRecipe({ instructions: updatedInstructions });
+  };
+
+  const removeInstruction = (index: number) => {
+    const updatedInstructions = [...recipe.instructions];
+    updatedInstructions.splice(index, 1);
+    updateRecipe({ instructions: updatedInstructions });
+  };
+
+  // Simplified icon handler that defaults to a fork/knife for any problematic icons
+  const getProperIcon = (icon: string | undefined): string => {
+    // If icon is undefined  return the default
+    if (!icon) {
+      return "🍴";
+    }
+
+    return icon;
+  };
+
+  return (
+    <form
+      data-testid="recipe-card"
+      style={isMobile ? { marginBottom: "100px" } : {}}
+      className="recipe-card"
+    >
+      {/* Recipe Title */}
+      <div className="recipe-header">
+        <input
+          type="text"
+          value={recipe.title || ""}
+          onChange={handleTitleChange}
+          className="recipe-title-input"
+        />
+
+        <div className="recipe-meta">
+          <div className="meta-item">
+            <span className="meta-icon">🕒</span>
+            <select
+              className="meta-select"
+              value={cookingTimeValues.find((t) => t.label === recipe.cooking_time)?.value || 3}
+              onChange={handleCookingTimeChange}
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 0px center",
+                backgroundSize: "12px",
+                appearance: "none",
+                WebkitAppearance: "none",
+              }}
+            >
+              {cookingTimeValues.map((time) => (
+                <option key={time.value} value={time.value}>
+                  {time.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="meta-item">
+            <span className="meta-icon">🏆</span>
+            <select
+              className="meta-select"
+              value={recipe.skill_level}
+              onChange={handleSkillLevelChange}
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 0px center",
+                backgroundSize: "12px",
+                appearance: "none",
+                WebkitAppearance: "none",
+              }}
+            >
+              {Object.values(SkillLevel).map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Dietary Preferences */}
+      <div className="section-container relative">
+        {changedKeysRef.current.includes("special_preferences") && <Ping />}
+        <h2 className="section-title">Dietary Preferences</h2>
+        <div className="dietary-options">
+          {Object.values(SpecialPreferences).map((option) => (
+            <label key={option} className="dietary-option">
+              <input
+                type="checkbox"
+                checked={recipe.special_preferences.includes(option)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleDietaryChange(option, e.target.checked)
+                }
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Ingredients */}
+      <div className="section-container relative">
+        {changedKeysRef.current.includes("ingredients") && <Ping />}
+        <div className="section-header">
+          <h2 className="section-title">Ingredients</h2>
+          <button
+            data-testid="add-ingredient-button"
+            type="button"
+            className="add-button"
+            onClick={addIngredient}
+          >
+            + Add Ingredient
+          </button>
+        </div>
+        <div data-testid="ingredients-container" className="ingredients-container">
+          {recipe.ingredients.map((ingredient, index) => (
+            <div key={index} data-testid="ingredient-card" className="ingredient-card">
+              <div className="ingredient-icon">{getProperIcon(ingredient.icon)}</div>
+              <div className="ingredient-content">
+                <input
+                  type="text"
+                  value={ingredient.name || ""}
+                  onChange={(e) => updateIngredient(index, "name", e.target.value)}
+                  placeholder="Ingredient name"
+                  className="ingredient-name-input"
+                />
+                <input
+                  type="text"
+                  value={ingredient.amount || ""}
+                  onChange={(e) => updateIngredient(index, "amount", e.target.value)}
+                  placeholder="Amount"
+                  className="ingredient-amount-input"
+                />
+              </div>
+              <button
+                type="button"
+                className="remove-button"
+                onClick={() => removeIngredient(index)}
+                aria-label="Remove ingredient"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="section-container relative">
+        {changedKeysRef.current.includes("instructions") && <Ping />}
+        <div className="section-header">
+          <h2 className="section-title">Instructions</h2>
+          <button type="button" className="add-step-button" onClick={addInstruction}>
+            + Add Step
+          </button>
+        </div>
+        <div data-testid="instructions-container" className="instructions-container">
+          {recipe.instructions.map((instruction, index) => (
+            <div key={index} className="instruction-item">
+              {/* Number Circle */}
+              <div className="instruction-number">{index + 1}</div>
+
+              {/* Vertical Line */}
+              {index < recipe.instructions.length - 1 && <div className="instruction-line" />}
+
+              {/* Instruction Content */}
+              <div
+                className={`instruction-content ${
+                  editingInstructionIndex === index
+                    ? "instruction-content-editing"
+                    : "instruction-content-default"
+                }`}
+                onClick={() => setEditingInstructionIndex(index)}
+              >
+                <textarea
+                  className="instruction-textarea"
+                  value={instruction || ""}
+                  onChange={(e) => updateInstruction(index, e.target.value)}
+                  placeholder={!instruction ? "Enter cooking instruction..." : ""}
+                  onFocus={() => setEditingInstructionIndex(index)}
+                  onBlur={(e) => {
+                    // Only blur if clicking outside this instruction
+                    if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setEditingInstructionIndex(null);
+                    }
+                  }}
+                />
+
+                {/* Delete Button (only visible on hover) */}
+                <button
+                  type="button"
+                  className={`instruction-delete-btn ${
+                    editingInstructionIndex === index
+                      ? "instruction-delete-btn-editing"
+                      : "instruction-delete-btn-default"
+                  } remove-button`}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering parent onClick
+                    removeInstruction(index);
+                  }}
+                  aria-label="Remove instruction"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Improve with AI Button */}
+      <div className="action-container">
+        <button
+          data-testid="improve-button"
+          className={isLoading ? "improve-button loading" : "improve-button"}
+          type="button"
+          onClick={() => {
+            if (!isLoading) {
+              appendMessage(
+                new TextMessage({
+                  content: "Improve the recipe",
+                  role: Role.User,
+                }),
+              );
+            }
+          }}
+          disabled={isLoading}
+        >
+          {isLoading ? "Please Wait..." : "Improve with AI"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Ping() {
+  return (
+    <span className="ping-animation">
+      <span className="ping-circle"></span>
+      <span className="ping-dot"></span>
+    </span>
+  );
+}
+
+
+// predictive state updates
+"""Predictive State Updates feature.
+
+This example demonstrates how to use predictive state updates with the ADK middleware.
+Predictive state updates allow the UI to show state changes in real-time as tool
+arguments are being streamed, providing a smooth document editing experience.
+
+Key concepts:
+1. PredictStateMapping: Configuration that tells the UI which tool arguments map to state keys
+2. When a tool is called that matches the mapping, a PredictState CustomEvent is emitted
+3. The UI uses this metadata to update state as tool arguments stream in
+4. The middleware emits a write_document tool call after write_document_local completes,
+   which triggers the frontend's write_document action to show a confirmation dialog
+   (controlled by emit_confirm_tool=True, which is the default)
+
+Note: We use write_document_local as the backend tool name to avoid conflicting with
+the frontend's write_document action that handles the confirmation UI.
+"""
+
+from __future__ import annotations
+
+from dotenv import load_dotenv
+load_dotenv()
+
+from typing import Dict, Optional
+from fastapi import FastAPI
+from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint, PredictStateMapping
+
+from google.adk.agents import LlmAgent
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.tools import ToolContext
+from google.adk.models import LlmResponse, LlmRequest
+from google.genai import types
+
+
+def write_document_local(
+    tool_context: ToolContext,
+    document: str
+) -> Dict[str, str]:
+    """
+    Write a document. Use markdown formatting to format the document.
+    It's good to format the document extensively so it's easy to read.
+    You can use all kinds of markdown.
+    However, do not use italic or strike-through formatting, it's reserved for another purpose.
+    You MUST write the full document, even when changing only a few words.
+    When making edits to the document, try to make them minimal - do not change every word.
+    Keep stories SHORT!
+
+    Args:
+        document: The document content to write in markdown format
+
+    Returns:
+        Dict indicating success status and message
+    """
+    try:
+        # Update the session state with the new document
+        tool_context.state["document"] = document
+
+        return {"status": "success", "message": "Document written successfully"}
+
+    except Exception as e:
+        return {"status": "error", "message": f"Error writing document: {str(e)}"}
+
+
+def on_before_agent(callback_context: CallbackContext):
+    """
+    Initialize document state if it doesn't exist.
+    """
+    if "document" not in callback_context.state:
+        # Initialize with empty document
+        callback_context.state["document"] = None
+
+    return None
+
+
+def before_model_modifier(
+    callback_context: CallbackContext, llm_request: LlmRequest
+) -> Optional[LlmResponse]:
+    """
+    Modifies the LLM request to include the current document state.
+    This enables predictive state updates by providing context about the current document.
+    """
+    agent_name = callback_context.agent_name
+    if agent_name == "DocumentAgent":
+        current_document = "No document yet"
+        if "document" in callback_context.state and callback_context.state["document"] is not None:
+            try:
+                current_document = callback_context.state["document"]
+            except Exception as e:
+                current_document = f"Error retrieving document: {str(e)}"
+
+        # Modify the system instruction to include current document state
+        original_instruction = llm_request.config.system_instruction or types.Content(role="system", parts=[])
+        prefix = f"""You are a helpful assistant for writing documents.
+        To write the document, you MUST use the write_document_local tool.
+        You MUST write the full document, even when changing only a few words.
+        When you wrote the document, DO NOT repeat it as a message.
+        Just briefly summarize the changes you made. 2 sentences max.
+        This is the current state of the document: ----
+        {current_document}
+        -----"""
+
+        # Ensure system_instruction is Content and parts list exists
+        if not isinstance(original_instruction, types.Content):
+            original_instruction = types.Content(role="system", parts=[types.Part(text=str(original_instruction))])
+        if not original_instruction.parts:
+            original_instruction.parts.append(types.Part(text=""))
+
+        # Modify the text of the first part
+        modified_text = prefix + (original_instruction.parts[0].text or "")
+        original_instruction.parts[0].text = modified_text
+        llm_request.config.system_instruction = original_instruction
+
+    return None
+
+
+# Create the predictive state updates agent
+predictive_state_updates_agent = LlmAgent(
+    name="DocumentAgent",
+    model="gemini-2.5-pro",
+    instruction="""
+    You are a helpful assistant for writing documents.
+    To write the document, you MUST use the write_document_local tool.
+    You MUST write the full document, even when changing only a few words.
+    When you wrote the document, DO NOT repeat it as a message.
+    Just briefly summarize the changes you made. 2 sentences max.
+
+    IMPORTANT RULES:
+    1. Always use the write_document_local tool for any document writing or editing requests
+    2. Write complete documents, not fragments
+    3. Use markdown formatting for better readability
+    4. Keep stories SHORT and engaging
+    5. After using the tool, provide a brief summary of what you created or changed
+    6. Do not use italic or strike-through formatting
+
+    Examples of when to use the tool:
+    - "Write a story about..." → Use tool with complete story in markdown
+    - "Edit the document to..." → Use tool with the full edited document
+    - "Add a paragraph about..." → Use tool with the complete updated document
+
+    Always provide complete, well-formatted documents that users can read and use.
+    """,
+    tools=[write_document_local],
+    before_agent_callback=on_before_agent,
+    before_model_callback=before_model_modifier,
+)
+
+# Create ADK middleware agent instance with predictive state configuration
+# The PredictStateMapping tells the UI to update the "document" state key
+# with the value from the "document" argument of the "write_document_local" tool.
+# After write_document_local completes, the middleware emits a write_document tool call
+# which triggers the frontend's confirmation dialog (via emit_confirm_tool=True).
+adk_predictive_state_agent = ADKAgent(
+    adk_agent=predictive_state_updates_agent,
+    app_name="demo_app",
+    user_id="demo_user",
+    session_timeout_seconds=3600,
+    use_in_memory_services=True,
+    predict_state=[
+        PredictStateMapping(
+            state_key="document",
+            tool="write_document_local",
+            tool_argument="document",
+        )
+    ],
+)
+
+# Create FastAPI app
+app = FastAPI(title="ADK Middleware Predictive State Updates")
+
+# Add the ADK endpoint
+add_adk_fastapi_endpoint(app, adk_predictive_state_agent, path="/")

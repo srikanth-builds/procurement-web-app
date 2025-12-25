@@ -1,0 +1,25 @@
+{
+  "name": "ngx-ag-ui",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "^19.0.0",
+    "@angular/core": "^19.0.0",
+    "@ag-ui/client": ">=0.0.1",
+    "@ag-ui/core": ">=0.0.1",
+    "rxjs": "^7.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "exports": {
+    "./core": {
+      "types": "./core/index.d.ts",
+      "default": "./fesm2022/ngx-ag-ui-core.mjs"
+    },
+    "./ui": {
+      "types": "./ui/index.d.ts",
+      "default": "./fesm2022/ngx-ag-ui-ui.mjs"
+    }
+  },
+  "sideEffects": false
+}

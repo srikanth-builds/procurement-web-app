@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ngx-ag-ui Documentation</title>
+  <style>
+    :root {
+      --primary: #00b262;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --code-bg: #0d1117;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--primary), #4ade80);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+    }
+    
+    h2 {
+      font-size: 1.5rem;
+      margin: 2.5rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--primary);
+    }
+    
+    h3 {
+      font-size: 1.2rem;
+      margin: 1.5rem 0 0.75rem;
+    }
+    
+    p {
+      margin-bottom: 1rem;
+    }
+    
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    
+    .card-title {
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    pre {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.9rem;
+      margin: 1rem 0;
+    }
+    
+    code {
+      font-family: 'Fira Code', monospace;
+      color: #a5d6ff;
+    }
+    
+    .inline-code {
+      background: var(--code-bg);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    
+    .diagram {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: monospace;
+      white-space: pre;
+      line-height: 1.4;
+      overflow-x: auto;
+    }
+    
+    .highlight {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .warning {
+      background: rgba(234, 179, 8, 0.1);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .warning-title {
+      color: #eab308;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .success {
+      background: rgba(0, 178, 98, 0.1);
+      border: 1px solid rgba(0, 178, 98, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .nav {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 250px;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+    
+    .nav-title {
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+    }
+    
+    .nav a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0;
+      transition: color 0.2s;
+    }
+    
+    .nav a:hover {
+      color: var(--primary);
+    }
+    
+    .main {
+      margin-left: 250px;
+    }
+    
+    @media (max-width: 768px) {
+      .nav { display: none; }
+      .main { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-title">📘 ngx-ag-ui</div>
+    <a href="#what-is-this">What is this?</a>
+    <a href="#key-concepts">Key Concepts</a>
+    <a href="#provide-action">provideAction</a>
+    <a href="#provide-readable">provideReadable</a>
+    <a href="#adapter">AgAdkAdapter</a>
+    <a href="#data-flow">Data Flow</a>
+    <a href="#security">Security</a>
+  </nav>
+
+  <main class="main">
+    <div class="container">
+      <h1>ngx-ag-ui</h1>
+      <p class="subtitle">Angular Library for Agentic UIs with Google ADK</p>
+
+      <!-- What is this? -->
+      <section id="what-is-this">
+        <h2>🤔 What is this?</h2>
+        <p>
+          <strong>ngx-ag-ui</strong> helps you build chat interfaces where an 
+          <span class="highlight">AI agent</span> can interact with your Angular app.
+        </p>
+        
+        <div class="card">
+          <div class="card-title">🎯 Simple Example</div>
+          <p>Imagine a chatbot that can:</p>
+          <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+            <li>Read your app's current state (like a shopping cart)</li>
+            <li>Update things in your UI (like adding items)</li>
+            <li>Ask you for approval before doing important actions</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Key Concepts -->
+      <section id="key-concepts">
+        <h2>📚 Key Concepts</h2>
+        
+        <div class="card">
+          <div class="card-title">1. 🛠️ Actions (Frontend Tools)</div>
+          <p>Things the agent can <strong>do</strong> in your app.</p>
+          <pre><code>provideAction({
+  name: 'add_to_cart',
+  description: 'Add a product to the shopping cart',
+  handler: async ({ productId }) => {
+    // This runs in YOUR browser
+    this.cartService.add(productId);
+    return { success: true };
+  }
+});</code></pre>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">2. 📖 Readables (Context)</div>
+          <p>Information you share <strong>with</strong> the agent.</p>
+          <pre><code>provideReadable({
+  description: 'Current user preferences',
+  value: {
+    language: 'en',
+    currency: 'USD',
+    theme: 'dark'
+  }
+});</code></pre>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">3. 🔌 Adapter</div>
+          <p>The connector between your Angular app and the AI backend.</p>
+          <pre><code>const adapter = new AgAdkAdapter({
+  url: 'http://localhost:8001/api/my-agent'
+});</code></pre>
+        </div>
+      </section>
+
+      <!-- How provideAction Works -->
+      <section id="provide-action">
+        <h2>🛠️ How provideAction Works</h2>
+        
+        <div class="warning">
+          <div class="warning-title">⚠️ Important to Understand</div>
+          <p>
+            The <strong>handler function stays in your browser</strong>. 
+            Only the <strong>name and description</strong> go to the backend.
+          </p>
+        </div>
+        
+        <h3>What Gets Sent to Backend</h3>
+        <div class="diagram">
+┌─────────────────────────────────────────┐
+│          YOUR ANGULAR APP               │
+│                                         │
+│  provideAction({                        │
+│    name: 'show_summary',                │
+│    description: 'Display summary',      │
+│    parameters: [...],                   │
+│    handler: async (args) => { ... } ◄───┼── Handler stays here!
+│  });                                    │
+└───────────────┬─────────────────────────┘
+                │
+                │ Only schema sent ▼
+                │
+┌───────────────▼─────────────────────────┐
+│          ADK BACKEND                    │
+│                                         │
+│  Receives:                              │
+│  {                                      │
+│    name: 'show_summary',                │
+│    description: 'Display summary',      │
+│    parameters: [...]                    │
+│  }                                      │
+│                                         │
+│  ❌ Handler is NOT here!                │
+└─────────────────────────────────────────┘</div>
+
+        <h3>When Agent Calls the Tool</h3>
+        <div class="diagram">
+1. Backend: "I want to call show_summary with args"
+                    │
+                    ▼
+2. Frontend receives TOOL_CALL_END event
+                    │
+                    ▼
+3. Adapter checks: Do we have a handler for 'show_summary'?
+                    │
+                    ▼
+4. YES → Execute handler IN THE BROWSER
+                    │
+                    ▼
+5. Send result back to backend</div>
+
+        <div class="success">
+          <p><strong>✅ Safe!</strong> The handler code never leaves your browser. 
+          The backend only knows the tool exists, not how it works.</p>
+        </div>
+      </section>
+
+      <!-- provideReadable -->
+      <section id="provide-readable">
+        <h2>📖 How provideReadable Works</h2>
+        
+        <p>Shares data FROM your app TO the agent as context.</p>
+        
+        <div class="diagram">
+┌─────────────────────────────────────────┐
+│          YOUR ANGULAR APP               │
+│                                         │
+│  provideReadable({                      │
+│    description: 'User preferences',     │
+│    value: { theme: 'dark' }             │
+│  });                                    │
+└───────────────┬─────────────────────────┘
+                │
+                │ Sent with each message ▼
+                │
+┌───────────────▼─────────────────────────┐
+│          ADK BACKEND                    │
+│                                         │
+│  Context: "User preferences: {          │
+│    theme: 'dark'                        │
+│  }"                                     │
+│                                         │
+│  Agent uses this to give better         │
+│  responses tailored to the user.        │
+└─────────────────────────────────────────┘</div>
+
+        <div class="warning">
+          <div class="warning-title">⚠️ Don't share sensitive data</div>
+          <p>The value is sent to the backend. Don't include passwords or secrets.</p>
+        </div>
+      </section>
+
+      <!-- Adapter -->
+      <section id="adapter">
+        <h2>🔌 AgAdkAdapter</h2>
+        
+        <p>The adapter is your single connection to an agent endpoint.</p>
+        
+        <div class="card">
+          <div class="card-title">What it handles automatically:</div>
+          <ul style="margin-left: 1.5rem;">
+            <li>Message streaming (character by character)</li>
+            <li>Tool call tracking (show spinners, status)</li>
+            <li>Agent handoffs (sub-agent name changes)</li>
+            <li>Predictive state updates</li>
+            <li>Frontend tool execution</li>
+          </ul>
+        </div>
+        
+        <pre><code>@Injectable()
+export class MyAgentService {
+  // Create adapter with endpoint URL
+  private adapter = new AgAdkAdapter({
+    url: 'http://localhost:8001/api/my-agent',
+    
+    // Execute frontend tools when backend calls them
+    onToolCallEnd: async (id, name, args) => {
+      if (this.context.hasHandler(name)) {
+        return await this.context.executeAction(name, args);
+      }
+      return null; // Backend handles it
+    }
+  });
+
+  // Expose reactive signals
+  messages = this.adapter.messages;      // Chat messages
+  activities = this.adapter.activities;  // Tool call status
+  isLoading = this.adapter.isLoading;    // Loading state
+}</code></pre>
+      </section>
+
+      <!-- Data Flow -->
+      <section id="data-flow">
+        <h2>🔄 Complete Data Flow</h2>
+        
+        <div class="diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                    YOUR ANGULAR APP                          │
+│                                                             │
+│   Component                    Service                      │
+│   ┌──────────┐                ┌──────────────┐             │
+│   │ Register │                │ AgAdkAdapter │             │
+│   │ Actions  │────────────────│              │             │
+│   │ Register │                │   messages   │             │
+│   │ Readable │                │  activities  │             │
+│   └──────────┘                │  isLoading   │             │
+│        │                      └──────┬───────┘             │
+│        │                             │                      │
+│        ▼                             ▼                      │
+│   AgContextService            HttpAgent                     │
+│   ┌──────────────┐           (AG-UI Protocol)               │
+│   │ toolDefs()   │                  │                       │
+│   │ context()    │                  │                       │
+│   │ handlers     │◄─────────────────┤ TOOL_CALL_END        │
+│   └──────────────┘                  │                       │
+└──────────────────────────────────────┼───────────────────────┘
+                                       │
+                                       ▼
+                         ┌────────────────────────┐
+                         │    ADK BACKEND          │
+                         │                        │
+                         │  • Receives messages   │
+                         │  • Runs AI model       │
+                         │  • Calls tools         │
+                         │  • Streams responses   │
+                         └────────────────────────┘</div>
+      </section>
+
+      <!-- Security -->
+      <section id="security">
+        <h2>🔒 Security Notes</h2>
+        
+        <div class="success">
+          <p><strong>✅ Handlers are safe</strong> - They never leave your browser.</p>
+        </div>
+        
+        <div class="warning">
+          <div class="warning-title">⚠️ Be careful with readables</div>
+          <p>Anything in <code class="inline-code">provideReadable()</code> is sent to the backend.</p>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">📋 Checklist</div>
+          <ul style="margin-left: 1.5rem;">
+            <li>✅ Action handlers execute in browser only</li>
+            <li>✅ Only tool schemas (name, description) go to backend</li>
+            <li>✅ One adapter per endpoint (enforced)</li>
+            <li>⚠️ Don't put secrets in readable values</li>
+            <li>⚠️ Validate tool call args before using them</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
