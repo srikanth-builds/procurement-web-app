@@ -28,6 +28,8 @@ const adapter = new AgAdkAdapter(options);
 | `agentNames`     | `Record<string, string>`           | ❌       | Map agent IDs to display names                     |
 | `toolTitles`     | `Record<string, string>`           | ❌       | Map tool names to display titles                   |
 | `onToolCallEnd`  | `(id, name, args) => Promise<any>` | ❌       | Handler for tool call completion                   |
+| `onEvent`        | `(event: AgEvent) => void`         | ❌       | Callback for ALL events (logging, animations)      |
+| `onCustomEvent`  | `Record<string, (data) => void>`   | ❌       | Typed handlers for custom events by name           |
 
 #### Signals (Readonly)
 
@@ -38,6 +40,7 @@ const adapter = new AgAdkAdapter(options);
 | `isLoading`        | `Signal<boolean>`                 | True when agent is processing  |
 | `error`            | `Signal<string \| null>`          | Current error message          |
 | `customState`      | `Signal<Record<string, unknown>>` | State from backend             |
+| `customEvents`     | `Signal<StoredCustomEvent[]>`     | Custom events from backend     |
 | `threadId`         | `Signal<string>`                  | Current conversation thread ID |
 | `runId`            | `Signal<string \| null>`          | Current run ID                 |
 | `currentAgentName` | `Signal<string>`                  | Active agent's display name    |

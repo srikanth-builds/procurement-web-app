@@ -24,7 +24,7 @@
  */
 import { signal, computed, WritableSignal, Signal } from '@angular/core';
 import { HttpAgent } from '@ag-ui/client';
-import { Message, EventType } from '../types/events';
+import { Message, EventType, AgEvent } from '../types/events';
 import { HistoryEntry, HistoryInputItem, HistoryEventItem } from '../types/index';
 import { v4 as uuidv4 } from 'uuid';
 import { AgentTool, AgentToolConfig } from '../types/agent-tool';
@@ -71,6 +71,50 @@ export interface AgAdkAdapterOptions {
    * Return the result to send back to the agent.
    */
   onToolCallEnd?: (toolCallId: string, toolName: string, args: Record<string, unknown>) => Promise<unknown | null>;
+  
+  /**
+   * Callback for EVERY event received from the backend.
+   * Useful for logging, debugging, or triggering animations on specific events.
+   * 
+   * @example
+   * ```typescript
+   * onEvent: (event) => {
+   *   if (event.type === 'RUN_ERROR') {
+   *     this.animationService.shake();
+   *   }
+   *   console.log('Event:', event);
+   * }
+   * ```
+   */
+  onEvent?: (event: AgEvent) => void;
+  
+  /**
+   * Handlers for specific custom event types.
+   * Keyed by the custom event's `name` property.
+   * 
+   * @example
+   * ```typescript
+   * onCustomEvent: {
+   *   'workflow_update': (data) => this.workflowState.set(data),
+   *   'notification': (data) => this.toast.show(data.message)
+   * }
+   * ```
+   */
+  onCustomEvent?: Record<string, (data: unknown) => void>;
+}
+
+// Re-export AgEvent from events.ts (don't duplicate)
+// AgEvent is already exported via public-api.ts
+
+/**
+ * Custom event stored in customEvents signal.
+ * Named StoredCustomEvent to avoid conflict with CustomEvent in events.ts.
+ */
+export interface StoredCustomEvent {
+  id: string;
+  name: string;
+  data: unknown;
+  timestamp: Date;
 }
 
 export interface Activity {
@@ -166,6 +210,12 @@ export class AgAdkAdapter {
   
   /** Custom state (from STATE_SNAPSHOT/STATE_DELTA events) */
   readonly customState: WritableSignal<Record<string, unknown>> = signal({});
+  
+  /** 
+   * Custom events received from the backend.
+   * Subscribe to these reactively or use onCustomEvent callback for specific types.
+   */
+  readonly customEvents: WritableSignal<StoredCustomEvent[]> = signal([]);
 
   // -------------------------------------------------------------------------
   // Computed
@@ -514,6 +564,13 @@ export class AgAdkAdapter {
   }
   
   private async handleEvent(event: any, isRestoring = false): Promise<void> {
+    // Call onEvent for ALL events (useful for logging, animations, custom handling)
+    try {
+      this.options.onEvent?.(event as AgEvent);
+    } catch (error) {
+      console.error('[AgAdkAdapter] onEvent error:', error);
+    }
+    
     switch (event.type) {
       // -----------------------------------------------------------------------
       // Message Streaming
@@ -827,6 +884,28 @@ export class AgAdkAdapter {
   // -------------------------------------------------------------------------
   
   private handleCustomEvent(event: any): void {
+    // Store in customEvents signal for reactive access
+    this.customEvents.update(events => [
+      ...events,
+      {
+        id: event.eventId ?? uuidv4(),
+        name: event.name ?? 'unknown',
+        data: event.data,
+        timestamp: new Date(),
+      }
+    ]);
+    
+    // Call typed handler if registered
+    const handler = this.options.onCustomEvent?.[event.name];
+    if (handler) {
+      try {
+        handler(event.data);
+      } catch (error) {
+        console.error(`[AgAdkAdapter] onCustomEvent[${event.name}] error:`, error);
+      }
+    }
+    
+    // Built-in handling for known custom event types
     if (event.name === 'activity') {
       this.handleActivitySnapshot(event.data);
     }
